@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPromptBySlug, getPromptVersions } from '@/lib/api';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+type Params = {
+  params: {
+    slug: string;
+  };
+  searchParams?: { [key: string]: string | string[] | undefined };
+};
+
+export async function GET(request: NextRequest, context: Params) {
   try {
-    // Get the slug from params
-    const { slug } = params;
+    const { slug } = context.params;
     const searchParams = request.nextUrl.searchParams;
     const version = searchParams.get('version');
     
