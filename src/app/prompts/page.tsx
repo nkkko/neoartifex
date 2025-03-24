@@ -9,6 +9,60 @@ import { FavoriteSettings } from '@/components/FavoriteSettings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Prompt } from '@/types';
 
+// Helper function to sort prompts consistently
+const sortPrompts = (
+  prompts: Partial<Prompt>[], 
+  sortOption: string, 
+  favorites: string[]
+): Partial<Prompt>[] => {
+  const sortedPrompts = [...prompts];
+  
+  switch (sortOption) {
+    case 'favorites':
+      // Sort by favorite status
+      sortedPrompts.sort((a, b) => {
+        const aIsFavorited = favorites.includes(a.slug || '');
+        const bIsFavorited = favorites.includes(b.slug || '');
+        
+        if (aIsFavorited === bIsFavorited) {
+          // If both have same favorite status, sort by newest
+          if (!a.created || !b.created) return 0;
+          return new Date(b.created).getTime() - new Date(a.created).getTime();
+        }
+        
+        // Favorited items come first
+        return aIsFavorited ? -1 : 1;
+      });
+      break;
+    case 'newest':
+      sortedPrompts.sort((a, b) => {
+        if (!a.created || !b.created) return 0;
+        return new Date(b.created).getTime() - new Date(a.created).getTime();
+      });
+      break;
+    case 'oldest':
+      sortedPrompts.sort((a, b) => {
+        if (!a.created || !b.created) return 0;
+        return new Date(a.created).getTime() - new Date(b.created).getTime();
+      });
+      break;
+    case 'a-z':
+      sortedPrompts.sort((a, b) => 
+        (a.title || '').localeCompare(b.title || '')
+      );
+      break;
+    case 'z-a':
+      sortedPrompts.sort((a, b) => 
+        (b.title || '').localeCompare(a.title || '')
+      );
+      break;
+    default:
+      break;
+  }
+  
+  return sortedPrompts;
+};
+
 export default function PromptsPage() {
   const [prompts, setPrompts] = useState<Partial<Prompt>[]>([]);
   const [filteredPrompts, setFilteredPrompts] = useState<Partial<Prompt>[]>([]);
@@ -19,6 +73,24 @@ export default function PromptsPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
+    // Load display preferences from sessionStorage
+    const loadDisplayPreferences = () => {
+      try {
+        const savedViewMode = sessionStorage.getItem('promptsViewMode');
+        const savedSortOption = sessionStorage.getItem('promptsSortOption');
+        
+        if (savedViewMode === 'grid' || savedViewMode === 'list') {
+          setViewMode(savedViewMode);
+        }
+        
+        if (savedSortOption) {
+          setSortOption(savedSortOption);
+        }
+      } catch (error) {
+        console.error('Error loading display preferences:', error);
+      }
+    };
+
     async function fetchPrompts() {
       try {
         const response = await fetch('/api/prompts');
@@ -29,7 +101,6 @@ export default function PromptsPage() {
         
         const data = await response.json();
         setPrompts(data);
-        setFilteredPrompts(data);
         
         const tags = new Set<string>();
         data.forEach((prompt: Partial<Prompt>) => {
@@ -42,6 +113,12 @@ export default function PromptsPage() {
         if (savedFavorites) {
           setFavorites(JSON.parse(savedFavorites));
         }
+        
+        // Initial prompt sorting will happen after the data is loaded 
+        // and the saved sort option has been applied
+        const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
+        const sortedData = sortPrompts(data, currentSortOption, savedFavorites ? JSON.parse(savedFavorites) : []);
+        setFilteredPrompts(sortedData);
       } catch (error) {
         console.error('Error fetching prompts:', error);
       } finally {
@@ -49,6 +126,8 @@ export default function PromptsPage() {
       }
     }
     
+    // Load preferences first, then fetch prompts
+    loadDisplayPreferences();
     fetchPrompts();
 
     // Listen for favorite updates from other components
@@ -80,42 +159,27 @@ export default function PromptsPage() {
   }, [prompts]);
 
   const handleSortChange = useCallback((option: string) => {
+    // Save sort option to sessionStorage
+    try {
+      sessionStorage.setItem('promptsSortOption', option);
+    } catch (error) {
+      console.error('Error saving sort option to sessionStorage:', error);
+    }
+    
     setSortOption(option);
-    setFilteredPrompts(prevPrompts => {
-      const sortedPrompts = [...prevPrompts];
-      
-      switch (option) {
-        case 'newest':
-          sortedPrompts.sort((a, b) => {
-            if (!a.created || !b.created) return 0;
-            return new Date(b.created).getTime() - new Date(a.created).getTime();
-          });
-          break;
-        case 'oldest':
-          sortedPrompts.sort((a, b) => {
-            if (!a.created || !b.created) return 0;
-            return new Date(a.created).getTime() - new Date(b.created).getTime();
-          });
-          break;
-        case 'a-z':
-          sortedPrompts.sort((a, b) => 
-            (a.title || '').localeCompare(b.title || '')
-          );
-          break;
-        case 'z-a':
-          sortedPrompts.sort((a, b) => 
-            (b.title || '').localeCompare(a.title || '')
-          );
-          break;
-        default:
-          break;
-      }
-      
-      return sortedPrompts;
-    });
-  }, []);
+    
+    // Use the sortPrompts helper function for consistent sorting
+    setFilteredPrompts(prevPrompts => sortPrompts(prevPrompts, option, favorites));
+  }, [favorites]);
   
   const handleViewChange = useCallback((view: 'grid' | 'list') => {
+    // Save view mode to sessionStorage
+    try {
+      sessionStorage.setItem('promptsViewMode', view);
+    } catch (error) {
+      console.error('Error saving view mode to sessionStorage:', error);
+    }
+    
     setViewMode(view);
   }, []);
 
