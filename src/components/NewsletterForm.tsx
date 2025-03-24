@@ -72,24 +72,44 @@ export function NewsletterForm() {
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-2">
-          {/* Email Field */}
-          <motion.div 
-            className="flex-grow"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className="w-full"
-              required
-            />
-          </motion.div>
+          {/* Email and Submit Button Row */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <motion.div 
+              className="flex-grow"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className="w-full"
+                required
+              />
+            </motion.div>
+            
+            {/* Submit Button */}
+            <motion.div
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="sm:flex-shrink-0"
+            >
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full"
+              >
+                {isSubmitting ? 'Joining...' : 'JOIN THE GUILD'}
+              </Button>
+            </motion.div>
+          </div>
           
           {/* Name Fields (conditionally displayed) */}
           {showNameFields && (
@@ -118,8 +138,8 @@ export function NewsletterForm() {
             </motion.div>
           )}
           
-          <div className="flex justify-between items-center">
-            {/* Toggle for name fields */}
+          {/* Toggle for name fields */}
+          <div className="flex justify-start items-center">
             {!showNameFields && !isSubmitting && !message?.type === 'success' && (
               <motion.button
                 type="button"
@@ -132,23 +152,6 @@ export function NewsletterForm() {
                 + Add your name (optional)
               </motion.button>
             )}
-            
-            {/* Submit Button */}
-            <motion.div
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="ml-auto"
-            >
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Joining...' : 'JOIN THE GUILD'}
-              </Button>
-            </motion.div>
           </div>
         </div>
         
