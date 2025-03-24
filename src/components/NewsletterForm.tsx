@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { motion } from 'framer-motion';
 
 export function NewsletterForm() {
   const [email, setEmail] = useState('');
@@ -60,28 +61,49 @@ export function NewsletterForm() {
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isSubmitting}
+          <motion.div 
             className="flex-grow"
-            required
-          />
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isSubmitting}
+              className="w-full"
+              required
+            />
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
             className="sm:flex-shrink-0"
           >
-            {isSubmitting ? 'Joining...' : 'JOIN THE GUILD'}
-          </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="w-full"
+            >
+              {isSubmitting ? 'Joining...' : 'JOIN THE GUILD'}
+            </Button>
+          </motion.div>
         </div>
         
         {message && (
-          <p className={`text-sm ${message.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          <motion.p 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`text-sm ${message.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+          >
             {message.text}
-          </p>
+          </motion.p>
         )}
       </form>
     </div>
