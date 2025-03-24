@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Prompt } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, User, Tag } from 'lucide-react';
+import { StarButton } from '@/components/StarButton';
 
 type PromptRowProps = {
   prompt: Partial<Prompt>;
@@ -15,7 +16,10 @@ export function PromptRow({ prompt }: PromptRowProps) {
     >
       <div className="flex flex-col sm:flex-row justify-between gap-4 p-4 border-b">
         <div className="space-y-1 flex-1">
-          <h3 className="text-lg font-medium">{prompt.title}</h3>
+          <div className="flex justify-between items-start">
+            <h3 className="text-lg font-medium mr-2">{prompt.title}</h3>
+            <StarButton slug={prompt.slug || ''} className="flex-shrink-0" />
+          </div>
           <p className="text-muted-foreground text-sm">{prompt.description}</p>
           <div className="flex flex-wrap gap-2 mt-2">
             {prompt.tags?.map((tag) => (

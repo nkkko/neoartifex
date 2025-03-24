@@ -5,6 +5,7 @@ import { PromptCard } from '@/components/PromptCard';
 import { PromptRow } from '@/components/PromptRow';
 import { FilterSettings } from '@/components/FilterSettings';
 import { DisplaySettings } from '@/components/DisplaySettings';
+import { FavoriteSettings } from '@/components/FavoriteSettings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Prompt } from '@/types';
 
@@ -15,6 +16,7 @@ export default function PromptsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortOption, setSortOption] = useState<string>('newest');
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchPrompts() {
@@ -34,6 +36,12 @@ export default function PromptsPage() {
           prompt.tags?.forEach(tag => tags.add(tag));
         });
         setAllTags(Array.from(tags));
+
+        // Load favorites from localStorage
+        const savedFavorites = localStorage.getItem('favoritedPrompts');
+        if (savedFavorites) {
+          setFavorites(JSON.parse(savedFavorites));
+        }
       } catch (error) {
         console.error('Error fetching prompts:', error);
       } finally {
@@ -42,6 +50,20 @@ export default function PromptsPage() {
     }
     
     fetchPrompts();
+
+    // Listen for favorite updates from other components
+    const handleFavoritesUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.favorites) {
+        setFavorites(customEvent.detail.favorites);
+      }
+    };
+
+    window.addEventListener('favorites-updated', handleFavoritesUpdate);
+    
+    return () => {
+      window.removeEventListener('favorites-updated', handleFavoritesUpdate);
+    };
   }, []);
 
   // Use useCallback to memoize handlers
@@ -97,14 +119,23 @@ export default function PromptsPage() {
     setViewMode(view);
   }, []);
 
+  const handleFavoritesChange = useCallback((newFavorites: string[]) => {
+    setFavorites(newFavorites);
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold">LLM Prompts Library</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-end">
           <FilterSettings 
             tags={allTags} 
             onFilterChange={handleFilterChange} 
+          />
+          <FavoriteSettings 
+            favorites={favorites}
+            onFavoritesChange={handleFavoritesChange}
+            allPrompts={prompts}
           />
           <DisplaySettings 
             view={viewMode}

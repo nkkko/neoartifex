@@ -9,6 +9,7 @@ import {
   CardFooter 
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { StarButton } from '@/components/StarButton';
 
 type PromptCardProps = {
   prompt: Partial<Prompt>;
@@ -18,7 +19,10 @@ export function PromptCard({ prompt }: PromptCardProps) {
   return (
     <Link href={`/prompts/${prompt.slug}`} className="block hover:no-underline transition-transform hover:scale-[1.02]">
       <Card className="h-full hover:border-primary/50">
-        <CardHeader>
+        <CardHeader className="relative pb-2">
+          <div className="absolute top-4 right-4">
+            <StarButton slug={prompt.slug || ''} />
+          </div>
           <CardTitle>{prompt.title}</CardTitle>
           <CardDescription>{prompt.description}</CardDescription>
         </CardHeader>
