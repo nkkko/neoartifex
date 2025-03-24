@@ -1,9 +1,10 @@
 // Unified KV interface that works with both local development and Cloudflare KV
 import { kv as mockKV } from './mock-kv';
 import { cloudflareKV } from './cloudflare-kv-api';
+import { KVInterface } from '@/types/kv';
 
 // Determine which KV implementation to use
-let activeKV: typeof mockKV;
+let activeKV: KVInterface;
 
 // In development, use the mock KV
 // In production on Vercel, use the Cloudflare KV API client
@@ -16,7 +17,7 @@ if (process.env.NODE_ENV === 'production' && cloudflareKV.isConfigured()) {
 }
 
 // Export the KV interface
-export const kv = activeKV;
+export const kv: KVInterface = activeKV;
 
 // For Cloudflare Workers, we'll keep this for compatibility
 // but it won't be used in Vercel functions

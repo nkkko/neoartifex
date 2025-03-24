@@ -1,10 +1,11 @@
-// Mock implementation of Vercel KV for development
-// This file provides a fallback when @vercel/kv is not available
+// Mock implementation of KV for development
+// This file provides a fallback when Cloudflare KV is not available
+import { KVInterface } from '@/types/kv';
 
 // Create an in-memory store for development
 const inMemoryStore: Record<string, any> = {};
 
-export const kv = {
+export const kv: KVInterface = {
   // Get a value from KV store
   async get(key: string) {
     // For client-side development (browser environment)
@@ -40,14 +41,15 @@ export const kv = {
     return true;
   },
 
-  // Other common Redis operations
-  async incr(key: string) {
+  // Increment a numeric value
+  async incr(key: string, by = 1) {
     const value = await this.get(key) || 0;
-    const newValue = typeof value === 'number' ? value + 1 : 1;
+    const newValue = typeof value === 'number' ? value + by : by;
     await this.set(key, newValue);
     return newValue;
   },
 
+  // Delete a key
   async del(key: string) {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem(`kv:${key}`);

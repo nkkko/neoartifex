@@ -4,6 +4,7 @@
  * This module provides a client for interacting with Cloudflare KV via the REST API.
  * It can be used in any environment, including Next.js API routes and Vercel functions.
  */
+import { KVInterface } from '@/types/kv';
 
 // Check if required environment variables are available
 const accountID = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -19,8 +20,8 @@ const endpoint = (key: string) => `${baseUrl}/${encodeURIComponent(key)}`;
 // Helper to check if all required configuration is present
 const isConfigured = () => !!(accountID && namespaceID && apiToken);
 
-// CloudflareKV API client
-export const cloudflareKV = {
+// Cloudflare KV API client with the standard KV interface
+export const cloudflareKV: KVInterface & { isConfigured: () => boolean; listKeys: (prefix?: string, limit?: number) => Promise<string[]> } = {
   /**
    * Check if the Cloudflare KV API client is configured
    */
@@ -152,6 +153,36 @@ export const cloudflareKV = {
   },
 
   /**
+   * Increment a numeric value in KV (emulates Redis INCR)
+   * @param key The key to increment
+   * @param by Amount to increment by (default 1)
+   * @returns The new value
+   */
+  async incr(key: string, by = 1): Promise<number> {
+    if (!isConfigured()) {
+      console.warn('Cloudflare KV API is not configured');
+      return 0; // Return 0 instead of null to match the interface
+    }
+
+    try {
+      // Get current value
+      const currentValue = await this.get(key);
+      const numValue = typeof currentValue === 'number' ? currentValue : 
+                      currentValue === null ? 0 : 
+                      parseInt(currentValue, 10) || 0;
+      
+      // Increment and store
+      const newValue = numValue + by;
+      const success = await this.set(key, newValue);
+      
+      return success ? newValue : 0; // Return 0 on failure instead of null
+    } catch (error) {
+      console.error('Exception incrementing value in Cloudflare KV:', error);
+      return 0; // Return 0 on error to match the interface
+    }
+  },
+
+  /**
    * List all keys in Cloudflare KV with an optional prefix
    * @param prefix Optional key prefix to filter by
    * @param limit Optional maximum number of keys to return (default 1000)
@@ -189,36 +220,6 @@ export const cloudflareKV = {
     } catch (error) {
       console.error('Exception listing Cloudflare KV keys:', error);
       return [];
-    }
-  },
-
-  /**
-   * Increment a numeric value in KV (emulates Redis INCR)
-   * @param key The key to increment
-   * @param by Amount to increment by (default 1)
-   * @returns The new value or null on error
-   */
-  async incr(key: string, by = 1): Promise<number | null> {
-    if (!isConfigured()) {
-      console.warn('Cloudflare KV API is not configured');
-      return null;
-    }
-
-    try {
-      // Get current value
-      const currentValue = await this.get(key);
-      const numValue = typeof currentValue === 'number' ? currentValue : 
-                      currentValue === null ? 0 : 
-                      parseInt(currentValue, 10) || 0;
-      
-      // Increment and store
-      const newValue = numValue + by;
-      const success = await this.set(key, newValue);
-      
-      return success ? newValue : null;
-    } catch (error) {
-      console.error('Exception incrementing value in Cloudflare KV:', error);
-      return null;
     }
   }
 };
