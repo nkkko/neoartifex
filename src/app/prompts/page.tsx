@@ -9,6 +9,46 @@ import { FavoriteSettings } from '@/components/FavoriteSettings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Prompt } from '@/types';
 
+// Cache ratings in localStorage
+const RATINGS_CACHE_KEY = 'cachedServerRatings';
+const RATINGS_CACHE_EXPIRY = 1000 * 60 * 5; // 5 minutes
+
+// Helper to get cached server ratings
+const getCachedRatings = (): { ratings: Record<string, { like: number; dislike: number; score: number }>, timestamp: number } | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const cache = localStorage.getItem(RATINGS_CACHE_KEY);
+    if (!cache) return null;
+    
+    const parsed = JSON.parse(cache);
+    // Check if cache is still valid
+    if (Date.now() - parsed.timestamp > RATINGS_CACHE_EXPIRY) {
+      return null; // Cache expired
+    }
+    
+    return parsed;
+  } catch (error) {
+    console.error('Error parsing cached ratings:', error);
+    return null;
+  }
+};
+
+// Helper to set cached server ratings
+const setCachedRatings = (ratings: Record<string, { like: number; dislike: number; score: number }>) => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const cache = {
+      ratings,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(RATINGS_CACHE_KEY, JSON.stringify(cache));
+  } catch (error) {
+    console.error('Error caching server ratings:', error);
+  }
+};
+
 // Helper function to sort prompts consistently
 const sortPrompts = (
   prompts: Partial<Prompt>[], 
@@ -101,6 +141,7 @@ export default function PromptsPage() {
   const sortOptionRef = useRef(sortOption);
   const favoritesRef = useRef(favorites);
   const ratingsRef = useRef(ratings);
+  const promptsRef = useRef(prompts);
 
   // Update refs when state changes
   useEffect(() => {
@@ -114,6 +155,40 @@ export default function PromptsPage() {
   useEffect(() => {
     ratingsRef.current = ratings;
   }, [ratings]);
+  
+  useEffect(() => {
+    promptsRef.current = prompts;
+  }, [prompts]);
+
+  // Batch fetch ratings for all prompts
+  const fetchAllRatings = useCallback(async (promptSlugs: string[]) => {
+    try {
+      // Check cache first
+      const cachedData = getCachedRatings();
+      if (cachedData) {
+        setRatings(cachedData.ratings);
+        return cachedData.ratings;
+      }
+      
+      // Fetch from API if not cached
+      const response = await fetch('/api/ratings');
+      if (response.ok) {
+        const data = await response.json();
+        const ratingsData = data.ratings || {};
+        
+        // Cache the ratings
+        setCachedRatings(ratingsData);
+        
+        // Update state
+        setRatings(ratingsData);
+        return ratingsData;
+      }
+      return {};
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+      return {};
+    }
+  }, []);
 
   useEffect(() => {
     // Load display preferences from sessionStorage
@@ -137,22 +212,21 @@ export default function PromptsPage() {
 
     async function fetchPrompts() {
       try {
-        // Fetch prompts and ratings in parallel
-        const [promptsResponse, ratingsResponse] = await Promise.all([
-          fetch('/api/prompts'),
-          fetch('/api/ratings')
-        ]);
+        // Fetch prompts
+        const promptsResponse = await fetch('/api/prompts');
         
         if (!promptsResponse.ok) {
           throw new Error('Failed to fetch prompts');
         }
         
         const data = await promptsResponse.json();
-        // Use setTimeout to avoid render loop
-        setTimeout(() => {
-          setPrompts(data);
-        }, 0);
+        setPrompts(data);
+        promptsRef.current = data;
         
+        // Extract prompt slugs for batch rating fetch
+        const slugs = data.map((prompt: Partial<Prompt>) => prompt.slug || '').filter(Boolean);
+        
+        // Extract all tags for filtering
         const tags = new Set<string>();
         data.forEach((prompt: Partial<Prompt>) => {
           prompt.tags?.forEach(tag => tags.add(tag));
@@ -161,29 +235,16 @@ export default function PromptsPage() {
 
         // Load favorites from localStorage
         const savedFavorites = localStorage.getItem('favoritedPrompts');
-        if (savedFavorites) {
-          setFavorites(JSON.parse(savedFavorites));
-        }
-        
-        // Load ratings if available
-        let ratingsData = {};
-        if (ratingsResponse.ok) {
-          const ratingsResult = await ratingsResponse.json();
-          ratingsData = ratingsResult.ratings || {};
-          // Only set ratings after initial render to avoid infinite loop
-          setTimeout(() => {
-            setRatings(ratingsData);
-          }, 0);
-        }
-        
-        // Initial prompt sorting will happen after the data is loaded 
-        // and the saved sort option has been applied
-        const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
         const currentFavorites = savedFavorites ? JSON.parse(savedFavorites) : [];
-        
-        // Update refs for consistency
-        sortOptionRef.current = currentSortOption;
+        setFavorites(currentFavorites);
         favoritesRef.current = currentFavorites;
+        
+        // Fetch all ratings in one batch request
+        const ratingsData = await fetchAllRatings(slugs);
+        
+        // Set initial sorting with all data
+        const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
+        sortOptionRef.current = currentSortOption;
         
         const sortedData = sortPrompts(
           data, 
@@ -191,10 +252,17 @@ export default function PromptsPage() {
           currentFavorites,
           ratingsData
         );
+        
         setFilteredPrompts(sortedData);
+        setLoading(false);
+        
+        // Prefetch individual ratings for each prompt to ensure they're cached
+        // This runs after the initial render to improve perceived performance
+        setTimeout(() => {
+          prefetchIndividualRatings(slugs, ratingsData);
+        }, 1000);
       } catch (error) {
         console.error('Error fetching prompts:', error);
-      } finally {
         setLoading(false);
       }
     }
@@ -215,18 +283,17 @@ export default function PromptsPage() {
     const handleRatingsUpdate = () => {
       const fetchLatestRatings = async () => {
         try {
-          const response = await fetch('/api/ratings');
-          if (response.ok) {
-            const data = await response.json();
-            const ratingsData = data.ratings || {};
-            setRatings(ratingsData);
-            
-            // Re-sort the prompts if the sort option is 'likes'
-            if (sortOptionRef.current === 'likes') {
-              setFilteredPrompts(prevPrompts => 
-                sortPrompts(prevPrompts, sortOptionRef.current, favoritesRef.current, ratingsData)
-              );
-            }
+          // Get all prompt slugs
+          const slugs = promptsRef.current.map(p => p.slug || '').filter(Boolean);
+          
+          // Re-fetch all ratings
+          const updatedRatings = await fetchAllRatings(slugs);
+          
+          // Re-sort the prompts if the sort option is 'likes'
+          if (sortOptionRef.current === 'likes') {
+            setFilteredPrompts(prevPrompts => 
+              sortPrompts(prevPrompts, sortOptionRef.current, favoritesRef.current, updatedRatings)
+            );
           }
         } catch (error) {
           console.error('Error fetching updated ratings:', error);
@@ -243,8 +310,6 @@ export default function PromptsPage() {
     }
     
     window.addEventListener('favorites-updated', handleFavoritesUpdate);
-    
-    // Custom event for when a new rating is submitted
     window.addEventListener('rating-submitted', handleRatingsUpdate);
     
     return () => {
@@ -254,14 +319,43 @@ export default function PromptsPage() {
         clearInterval(ratingsPollInterval);
       }
     };
-  }, []);
+  }, [fetchAllRatings]);
+
+  // Prefetch individual ratings to ensure they're in the cache
+  const prefetchIndividualRatings = async (slugs: string[], existingRatings: Record<string, any>) => {
+    // Only prefetch what we don't already have in the cache
+    const cached = getCachedRatings();
+    if (cached) {
+      // For better performance, split into chunks of 10 prefetches at a time
+      const chunkSize = 10;
+      for (let i = 0; i < slugs.length; i += chunkSize) {
+        const chunk = slugs.slice(i, i + chunkSize);
+        
+        // Process each chunk in parallel
+        await Promise.all(chunk.map(async (slug) => {
+          try {
+            // Skip if already in cache
+            if (cached.ratings[slug]) return;
+            
+            // Prefetch in background
+            fetch(`/api/ratings?slugs=${slug}`).catch(() => {});
+          } catch (error) {
+            // Ignore errors during prefetching
+          }
+        }));
+        
+        // Small delay between chunks to avoid overwhelming the API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+  };
 
   // Use useCallback to memoize handlers
   const handleFilterChange = useCallback((selectedTags: string[]) => {
-    let filtered = prompts;
+    let filtered = promptsRef.current;
     
     if (selectedTags.length > 0) {
-      filtered = prompts.filter(prompt => 
+      filtered = promptsRef.current.filter(prompt => 
         selectedTags.every(tag => prompt.tags?.includes(tag))
       );
     }
@@ -274,7 +368,7 @@ export default function PromptsPage() {
       ratingsRef.current
     );
     setFilteredPrompts(sorted);
-  }, [prompts]);
+  }, []);
 
   const handleSortChange = useCallback((option: string) => {
     // Save sort option to sessionStorage

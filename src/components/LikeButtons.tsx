@@ -16,7 +16,53 @@ type PromptRating = {
   count: number; // A counter for analytics (how many times the user changed their rating)
 };
 
-// Helper functions for localStorage
+interface ServerRating {
+  like: number;
+  dislike: number;
+  score: number;
+}
+
+// Cache ratings in localStorage
+const RATINGS_CACHE_KEY = 'cachedServerRatings';
+const RATINGS_CACHE_EXPIRY = 1000 * 60 * 5; // 5 minutes
+
+// Helper to get cached server ratings
+const getCachedServerRatings = (): { ratings: Record<string, ServerRating>, timestamp: number } | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const cache = localStorage.getItem(RATINGS_CACHE_KEY);
+    if (!cache) return null;
+    
+    const parsed = JSON.parse(cache);
+    // Check if cache is still valid
+    if (Date.now() - parsed.timestamp > RATINGS_CACHE_EXPIRY) {
+      return null; // Cache expired
+    }
+    
+    return parsed;
+  } catch (error) {
+    console.error('Error parsing cached ratings:', error);
+    return null;
+  }
+};
+
+// Helper to set cached server ratings
+const setCachedServerRatings = (ratings: Record<string, ServerRating>) => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const cache = {
+      ratings,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(RATINGS_CACHE_KEY, JSON.stringify(cache));
+  } catch (error) {
+    console.error('Error caching server ratings:', error);
+  }
+};
+
+// Helper functions for user's rating history
 const getRating = (slug: string): PromptRating => {
   if (typeof window === 'undefined') {
     return { liked: null, count: 0 };
@@ -71,12 +117,6 @@ const saveRating = (slug: string, liked: boolean | null) => {
   }
 };
 
-interface ServerRating {
-  like: number;
-  dislike: number;
-  score: number;
-}
-
 export function LikeButtons({ slug, className }: LikeButtonsProps) {
   const [rating, setRating] = useState<PromptRating>({ liked: null, count: 0 });
   const [serverRating, setServerRating] = useState<ServerRating | null>(null);
@@ -85,23 +125,47 @@ export function LikeButtons({ slug, className }: LikeButtonsProps) {
   useEffect(() => {
     setRating(getRating(slug));
     
-    // Fetch current ratings from server
-    const fetchRatings = async () => {
-      try {
-        const response = await fetch('/api/ratings');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.ratings && data.ratings[slug]) {
-            setServerRating(data.ratings[slug]);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching ratings:', error);
-      }
+    // Check cache first
+    const cachedRatings = getCachedServerRatings();
+    if (cachedRatings && cachedRatings.ratings[slug]) {
+      setServerRating(cachedRatings.ratings[slug]);
+    } else {
+      // Fetch from server if not in cache or expired
+      fetchRating();
+    }
+    
+    // Add listener for ratings changes
+    const handleRatingsUpdate = () => {
+      fetchRating();
     };
     
-    fetchRatings();
+    window.addEventListener('rating-submitted', handleRatingsUpdate);
+    
+    return () => {
+      window.removeEventListener('rating-submitted', handleRatingsUpdate);
+    };
   }, [slug]);
+  
+  // Function to fetch rating from server
+  const fetchRating = async () => {
+    try {
+      const response = await fetch(`/api/ratings?slugs=${slug}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.ratings && data.ratings[slug]) {
+          setServerRating(data.ratings[slug]);
+          
+          // Update cache with this rating
+          const cachedRatings = getCachedServerRatings();
+          const ratings = cachedRatings?.ratings || {};
+          ratings[slug] = data.ratings[slug];
+          setCachedServerRatings(ratings);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching rating:', error);
+    }
+  };
   
   const handleRate = (liked: boolean, e: React.MouseEvent) => {
     // Prevent parent link navigation
@@ -143,6 +207,12 @@ export function LikeButtons({ slug, className }: LikeButtonsProps) {
       // Update score
       updatedRating.score = updatedRating.like - updatedRating.dislike;
       setServerRating(updatedRating);
+      
+      // Update the cache with optimistic update
+      const cachedRatings = getCachedServerRatings();
+      const ratings = cachedRatings?.ratings || {};
+      ratings[slug] = updatedRating;
+      setCachedServerRatings(ratings);
     }
   };
 

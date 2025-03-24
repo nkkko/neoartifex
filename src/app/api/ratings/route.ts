@@ -40,6 +40,41 @@ const KV = {
     }
   },
   
+  // Get multiple ratings by slugs (batch fetch)
+  async getBatchRatings(slugs: string[]): Promise<KVOperation<Record<string, Rating>>> {
+    try {
+      // Create an array of promises for each slug
+      const promises = slugs.map(async (slug) => {
+        const key = getRatingKey(slug);
+        const value = await kv.get(key);
+        return { 
+          slug, 
+          rating: value || { like: 0, dislike: 0, score: 0 } 
+        };
+      });
+      
+      // Execute all promises in parallel
+      const results = await Promise.all(promises);
+      
+      // Convert to a record format
+      const ratingsRecord: Record<string, Rating> = {};
+      results.forEach(({ slug, rating }) => {
+        ratingsRecord[slug] = rating;
+      });
+      
+      return {
+        success: true,
+        data: ratingsRecord
+      };
+    } catch (error) {
+      console.error(`Error batch fetching ratings:`, error);
+      return { 
+        success: false, 
+        error: `Failed to batch fetch ratings`
+      };
+    }
+  },
+  
   // Set a rating for a specific slug
   async setRating(slug: string, rating: Rating): Promise<KVOperation> {
     try {
@@ -100,11 +135,23 @@ const KV = {
   }
 };
 
-// Get all ratings
-export async function GET() {
+// Get all ratings or batch ratings by slugs
+export async function GET(request: NextRequest) {
   try {
-    // Get all ratings
-    const result = await KV.getAllRatings();
+    // Get slugs from query params if provided
+    const { searchParams } = new URL(request.url);
+    const slugsParam = searchParams.get('slugs');
+    
+    let result: KVOperation<Record<string, Rating>>;
+    
+    if (slugsParam) {
+      // Batch fetch specific slugs
+      const slugs = slugsParam.split(',');
+      result = await KV.getBatchRatings(slugs);
+    } else {
+      // Get all ratings
+      result = await KV.getAllRatings();
+    }
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to fetch ratings');
@@ -122,7 +169,7 @@ export async function GET() {
       }
     }
     
-    return NextResponse.json({ ratings });
+    return NextResponse.json({ ratings, timestamp: Date.now() });
   } catch (error) {
     console.error('Error fetching ratings:', error);
     return NextResponse.json(
