@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { NewsletterForm } from '@/components/NewsletterForm';
-import { 
-  FadeIn, 
-  SlideUp, 
-  StaggerContainer, 
-  StaggerItem, 
+import { PatternedBackground } from '@/components/PatternedBackground';
+import {
+  FadeIn,
+  SlideUp,
+  StaggerContainer,
+  StaggerItem,
   ScaleOnHover,
   TextReveal,
   ScrollReveal
@@ -17,7 +17,12 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-16 pb-16">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary/70 to-purple-600 dark:from-primary/60 dark:to-purple-700 text-white py-24">
+      <PatternedBackground 
+        pattern="grid"
+        opacity={0.1}
+        patternColor="rgba(255,255,255,0.3)"
+        className="bg-gradient-to-r from-primary/70 to-purple-600 dark:from-primary/60 dark:to-purple-700 text-white py-24"
+      >
         <div className="container mx-auto px-4 text-center">
           <SlideUp>
             <h1 className="text-5xl font-bold mb-3">NeoArtifex: The Modern Artificer&apos;s Guide</h1>
@@ -37,12 +42,12 @@ export default function Home() {
           <SlideUp delay={0.3}>
             <Button asChild size="lg" className="transition-transform hover:scale-105">
               <Link href="/prompts">
-                DISCOVER THE CRAFT
+                DISCOVER THE PROMPTS
               </Link>
             </Button>
           </SlideUp>
         </div>
-      </section>
+      </PatternedBackground>
 
       {/* The Artificer's Prompt Library */}
       <ScrollReveal>
@@ -107,7 +112,12 @@ export default function Home() {
 
       {/* About Section */}
       <ScrollReveal>
-        <section className="bg-muted/30 py-16">
+        <PatternedBackground 
+          pattern="dots" 
+          opacity={0.1}
+          patternColor="currentColor"
+          className="bg-muted/30 py-16"
+        >
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto">
               <TextReveal>
@@ -154,7 +164,7 @@ export default function Home() {
               </TextReveal>
             </div>
           </div>
-        </section>
+        </PatternedBackground>
       </ScrollReveal>
 
       {/* Content Pillars */}
@@ -214,7 +224,12 @@ export default function Home() {
 
       {/* Featured Explorations */}
       <ScrollReveal>
-        <section className="bg-muted/30 py-16">
+        <PatternedBackground 
+          pattern="grid" 
+          opacity={0.2}
+          patternColor="currentColor"
+          className="bg-muted/30 py-16"
+        >
           <div className="container mx-auto px-4">
             <TextReveal>
               <h2 className="text-3xl font-bold mb-3 text-center">Featured Explorations</h2>
@@ -265,35 +280,43 @@ export default function Home() {
               </blockquote>
             </FadeIn>
           </div>
-        </section>
+        </PatternedBackground>
       </ScrollReveal>
 
       {/* Call to Action */}
       <ScrollReveal>
         <section className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
+          <div className="text-center">
             <TextReveal>
               <h2 className="text-3xl font-bold mb-6">Forge Your Path</h2>
             </TextReveal>
 
             <TextReveal delay={0.1}>
-              <p className="mb-8 text-lg">
+              <p className="mb-8 text-lg max-w-3xl mx-auto">
                 In every era, those who mastered new tools shaped the future.
                 The artificers of this age will build with intelligence itself.
               </p>
             </TextReveal>
-
-            <SlideUp delay={0.2}>
-              <div className="bg-muted/50 p-6 rounded-lg mb-10">
-                <h3 className="text-xl font-semibold mb-4">Join the Artificer&apos;s Guild Newsletter</h3>
-                <p className="text-muted-foreground mb-6">
-                  Receive weekly insights, tool discoveries, and artificer techniques directly to your inbox.
-                </p>
-                <NewsletterForm />
-              </div>
-            </SlideUp>
           </div>
         </section>
+      </ScrollReveal>
+
+      {/* Newsletter Section */}
+      <ScrollReveal>
+        <PatternedBackground 
+          pattern="dots" 
+          opacity={0.15}
+          patternColor="rgba(0,0,0,0.3)"
+          className="w-full bg-white dark:bg-black py-12"
+        >
+          <div className="container mx-auto px-4 text-center">
+            <h3 className="text-xl font-semibold mb-4">Join the Artificer&apos;s Guild Newsletter</h3>
+            <p className="text-muted-foreground mb-6 max-w-3xl mx-auto">
+              Receive weekly insights, tool discoveries, and artificer techniques directly to your inbox.
+            </p>
+            <NewsletterForm />
+          </div>
+        </PatternedBackground>
       </ScrollReveal>
     </div>
   );
