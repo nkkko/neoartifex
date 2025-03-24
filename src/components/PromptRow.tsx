@@ -19,9 +19,14 @@ export function PromptRow({ prompt }: PromptRowProps) {
         <div className="space-y-1 flex-1">
           <div className="flex justify-between items-start">
             <h3 className="text-lg font-medium mr-2">{prompt.title}</h3>
-            <div className="flex items-center gap-1">
-              <CopyPromptButton slug={prompt.slug || ''} className="flex-shrink-0" />
-              <StarButton slug={prompt.slug || ''} className="flex-shrink-0" />
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1">
+                <CopyPromptButton slug={prompt.slug || ''} className="flex-shrink-0" />
+                <StarButton slug={prompt.slug || ''} className="flex-shrink-0" />
+              </div>
+              <div className="flex justify-end">
+                <LikeButtons slug={prompt.slug || ''} />
+              </div>
             </div>
           </div>
           <p className="text-muted-foreground text-sm">{prompt.description}</p>
@@ -33,15 +38,13 @@ export function PromptRow({ prompt }: PromptRowProps) {
             ))}
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row items-end justify-end gap-2">
-          <LikeButtons slug={prompt.slug || ''} />
-          
-          {prompt.version && prompt.version > 1 && (
+        {prompt.version && prompt.version > 1 && (
+          <div className="flex items-end justify-end">
             <Badge variant="outline" className="text-xs border-primary text-primary">
               v{prompt.version}
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Link>
   );
