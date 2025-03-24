@@ -1,139 +1,179 @@
-# Configuring Storage for Vercel Deployment
+# Configuring Storage for Cloudflare Deployment
 
-This application uses a ratings system that requires persistent storage. Since Vercel deployments are serverless and stateless, we need to use an external storage solution.
+This application uses a ratings system that requires persistent storage. Since this is a serverless application, we need to use an external storage solution.
 
-## Option 1: Vercel KV (Recommended)
+## Option 1: Cloudflare KV (Recommended)
 
-Vercel KV is a Redis-compatible key-value database that's fully managed and integrated with Vercel.
+Cloudflare KV provides low-latency, high-throughput global storage for your application.
 
 ### Setup Steps:
 
-1. **Install the Vercel CLI** (if not already installed):
+1. **Install the Cloudflare Wrangler CLI** (if not already installed):
    ```bash
-   npm i -g vercel
+   npm install -g wrangler
    ```
 
-2. **Add Vercel KV to your project**:
+2. **Login to Cloudflare**:
    ```bash
-   vercel kv:add
+   wrangler login
    ```
 
-3. **Follow the prompts** to create a new KV database or select an existing one.
+3. **Create a KV namespace**:
+   ```bash
+   npx wrangler kv namespace create NEOARTIFEX_KV
+   ```
+   
+   This will output something like:
+   ```
+   🌀 Creating namespace with title <project-name>-NEOARTIFEX_KV
+   ✨ Success!
+   Add the following to your wrangler.toml:
+   [[kv_namespaces]]
+   binding = "NEOARTIFEX_KV"
+   id = "<your-namespace-id>"
+   ```
 
-4. **Update the API code** to use Vercel KV:
-   In `src/app/api/ratings/route.ts`, replace the simulated KV store with the actual Vercel KV implementation:
+4. **Create a wrangler.toml file** in your project root:
+   ```toml
+   name = "neoartifex"
+   main = "src/worker.ts"
+   compatibility_date = "2023-01-01"
+
+   [[kv_namespaces]]
+   binding = "NEOARTIFEX_KV"
+   id = "<your-namespace-id>"
+   ```
+
+5. **Install the Cloudflare Workers SDK**:
+   ```bash
+   npm install @cloudflare/workers-types
+   ```
+
+6. **Update the KV implementation** to use Cloudflare KV:
+   Create a new file at `src/lib/cloudflare-kv.ts`:
 
    ```typescript
-   import { kv } from '@vercel/kv';
-
-   // Then replace the simulated KV.get and KV.set methods with:
+   // Implementation for Cloudflare KV
    
-   // Get a value from KV store
-   async get(key: string): Promise<KVOperation> {
-     try {
-       const value = await kv.get(key);
-       return { success: true, data: value };
-     } catch (error) {
-       console.error('Error reading from KV:', error);
-       return { success: false, error: 'Failed to read from KV store' };
-     }
-   },
-   
-   // Set a value in KV store
-   async set(key: string, value: any): Promise<KVOperation> {
-     try {
-       await kv.set(key, value);
-       return { success: true };
-     } catch (error) {
-       console.error('Error writing to KV:', error);
-       return { success: false, error: 'Failed to write to KV store' };
-     }
+   export interface Env {
+     NEOARTIFEX_KV: KVNamespace;
    }
+   
+   let kvNamespace: KVNamespace;
+   
+   export const initializeKV = (env: Env) => {
+     kvNamespace = env.NEOARTIFEX_KV;
+   };
+   
+   export const kv = {
+     async get(key: string) {
+       try {
+         if (!kvNamespace) {
+           throw new Error('KV namespace not initialized');
+         }
+         const value = await kvNamespace.get(key);
+         return value ? JSON.parse(value) : null;
+       } catch (error) {
+         console.error('Error reading from Cloudflare KV:', error);
+         return null;
+       }
+     },
+     
+     async set(key: string, value: any) {
+       try {
+         if (!kvNamespace) {
+           throw new Error('KV namespace not initialized');
+         }
+         await kvNamespace.put(key, JSON.stringify(value));
+         return true;
+       } catch (error) {
+         console.error('Error writing to Cloudflare KV:', error);
+         return false;
+       }
+     },
+     
+     // Additional Redis-like methods
+     async incr(key: string) {
+       const value = await this.get(key) || 0;
+       const newValue = typeof value === 'number' ? value + 1 : 1;
+       await this.set(key, newValue);
+       return newValue;
+     },
+     
+     async del(key: string) {
+       try {
+         if (!kvNamespace) {
+           throw new Error('KV namespace not initialized');
+         }
+         await kvNamespace.delete(key);
+         return true;
+       } catch (error) {
+         console.error('Error deleting from Cloudflare KV:', error);
+         return false;
+       }
+     }
+   };
    ```
 
-5. **Install the Vercel KV package**:
-   ```bash
-   npm install @vercel/kv
-   ```
-
-## Option 2: Upstash Redis
-
-If you prefer to use Upstash Redis directly:
-
-1. **Create an Upstash Redis database** at [console.upstash.com](https://console.upstash.com)
-
-2. **Get your REST API credentials** from the Upstash console
-
-3. **Add environment variables** to your Vercel project:
-   - `UPSTASH_REDIS_REST_URL`
-   - `UPSTASH_REDIS_REST_TOKEN`
-
-4. **Install the Upstash Redis client**:
-   ```bash
-   npm install @upstash/redis
-   ```
-
-5. **Update the API code** to use Upstash Redis:
+7. **Create a Cloudflare Worker** at `src/worker.ts`:
    ```typescript
-   import { Redis } from '@upstash/redis';
-
-   const redis = new Redis({
-     url: process.env.UPSTASH_REDIS_REST_URL!,
-     token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-   });
-
-   // Then replace the simulated KV.get and KV.set methods with:
+   import { initializeKV } from './lib/cloudflare-kv';
    
-   // Get a value from Redis
-   async get(key: string): Promise<KVOperation> {
-     try {
-       const value = await redis.get(key);
-       return { success: true, data: value };
-     } catch (error) {
-       console.error('Error reading from Redis:', error);
-       return { success: false, error: 'Failed to read from Redis' };
-     }
-   },
-   
-   // Set a value in Redis
-   async set(key: string, value: any): Promise<KVOperation> {
-     try {
-       await redis.set(key, value);
-       return { success: true };
-     } catch (error) {
-       console.error('Error writing to Redis:', error);
-       return { success: false, error: 'Failed to write to Redis' };
-     }
+   export interface Env {
+     NEOARTIFEX_KV: KVNamespace;
    }
+   
+   export default {
+     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+       // Initialize the KV namespace
+       initializeKV(env);
+       
+       // Handle your API requests here
+       // You can forward them to your Next.js API routes or implement directly here
+       
+       return new Response('Worker is running!', { status: 200 });
+     },
+   };
    ```
 
-## Option 3: Planetscale or Other Database
-
-For more complex data storage needs, you might want to use a full database like Planetscale (MySQL):
-
-1. **Create a Planetscale database** at [planetscale.com](https://planetscale.com)
-
-2. **Get your connection string** from the Planetscale dashboard
-
-3. **Add the connection string as an environment variable** in Vercel:
-   - `DATABASE_URL`
-
-4. **Install Prisma or another ORM**:
+8. **Deploy your worker**:
    ```bash
-   npm install prisma @prisma/client
-   npx prisma init
+   npx wrangler deploy
    ```
-
-5. **Define your schema** in `prisma/schema.prisma`
-
-6. **Update your API code** to use the database via Prisma or another method
 
 ## Local Development
 
-The current implementation uses localStorage as a fallback for local development. This works for testing but won't persist data between server restarts or deployments.
+For local development, you can continue using the mock KV implementation:
 
-For a more consistent development experience, you might want to:
+```typescript
+// src/lib/kv.ts
+import { kv as mockKV } from './mock-kv';
+import { kv as cloudflareKV, initializeKV } from './cloudflare-kv';
 
-1. Use a local Redis instance
-2. Connect to your production database from your development environment
-3. Use a development instance of your database
+// Use mock KV for local development, Cloudflare KV for production
+export const kv = process.env.NODE_ENV === 'production' ? cloudflareKV : mockKV;
+export { initializeKV };
+```
+
+Then update your API routes to use this unified interface:
+
+```typescript
+import { kv } from '@/lib/kv';
+```
+
+## Integrating with Next.js API Routes
+
+To use Cloudflare KV with your Next.js API routes:
+
+1. **Update the ratings API** to use the unified KV interface:
+   In `src/app/api/ratings/route.ts`, replace the import:
+   ```typescript
+   import { kv } from '@/lib/kv';
+   ```
+
+2. **For local development with Cloudflare KV**, you can use:
+   ```bash
+   npx wrangler dev
+   ```
+
+This setup allows you to use Cloudflare KV in production while maintaining a simple development experience.

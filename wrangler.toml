@@ -1,0 +1,9 @@
+name = "neoartifex"
+main = "src/worker.ts"
+compatibility_date = "2023-01-01"
+
+# This is where you'll add your KV namespace ID after creating it
+# Replace <your-namespace-id> with the actual ID from the wrangler command output
+[[kv_namespaces]]
+binding = "NEOARTIFEX_KV"
+id = "cc4a7a302c70476e9937d4b49d4ea23b"

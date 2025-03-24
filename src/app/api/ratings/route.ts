@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@/lib/mock-kv';
+import { kv } from '@/lib/kv';
 
 type Rating = {
   like: number; // Count of likes
