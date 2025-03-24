@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { StarButton } from '@/components/StarButton';
 import { CopyPromptButton } from '@/components/CopyPromptButton';
+import { LikeButtons } from '@/components/LikeButtons';
 
 type PromptCardProps = {
   prompt: Partial<Prompt>;
@@ -37,13 +38,15 @@ export function PromptCard({ prompt }: PromptCardProps) {
             ))}
           </div>
         </CardContent>
-        {prompt.version && prompt.version > 1 && (
-          <CardFooter className="flex justify-end">
+        <CardFooter className="flex justify-between items-center">
+          <LikeButtons slug={prompt.slug || ''} />
+          
+          {prompt.version && prompt.version > 1 && (
             <Badge variant="outline" className="border-primary text-primary">
               v{prompt.version}
             </Badge>
-          </CardFooter>
-        )}
+          )}
+        </CardFooter>
       </Card>
     </Link>
   );

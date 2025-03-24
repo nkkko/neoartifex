@@ -3,6 +3,7 @@ import { Prompt } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { StarButton } from '@/components/StarButton';
 import { CopyPromptButton } from '@/components/CopyPromptButton';
+import { LikeButtons } from '@/components/LikeButtons';
 
 type PromptRowProps = {
   prompt: Partial<Prompt>;
@@ -32,13 +33,15 @@ export function PromptRow({ prompt }: PromptRowProps) {
             ))}
           </div>
         </div>
-        {prompt.version && prompt.version > 1 && (
-          <div className="flex items-end justify-end">
+        <div className="flex flex-col sm:flex-row items-end justify-end gap-2">
+          <LikeButtons slug={prompt.slug || ''} />
+          
+          {prompt.version && prompt.version > 1 && (
             <Badge variant="outline" className="text-xs border-primary text-primary">
               v{prompt.version}
             </Badge>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </Link>
   );
