@@ -6,9 +6,8 @@ export async function GET(
   { params }: { params: { slug: string } }
 ) {
   try {
-    // Await the params object since it's now a Promise in Next.js App Router
-    const resolvedParams = await params;
-    const { slug } = resolvedParams;
+    // Get the slug from params
+    const { slug } = params;
     const searchParams = request.nextUrl.searchParams;
     const version = searchParams.get('version');
     
