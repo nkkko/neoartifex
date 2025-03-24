@@ -67,6 +67,7 @@ export function DisplaySettings({
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="favorites">Favorites First</SelectItem>
                 <SelectItem value="newest">Newest First</SelectItem>
                 <SelectItem value="oldest">Oldest First</SelectItem>
                 <SelectItem value="a-z">A-Z</SelectItem>

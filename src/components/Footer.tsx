@@ -5,7 +5,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  
+
   return (
     <footer className="border-t bg-muted/40">
       <div className="container mx-auto px-4 py-8">
@@ -13,10 +13,10 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">NeoArtifex</h3>
             <p className="text-muted-foreground">
-              Your personal library for crafting and organizing AI prompts.
+              A modern craftsperson wielding AI as their chisel and code as their canvas.
             </p>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
@@ -47,7 +47,7 @@ export function Footer() {
               </li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
             <div className="flex flex-col space-y-2">
@@ -57,14 +57,14 @@ export function Footer() {
                   hi@neoartifex.com
                 </a>
               </Button>
-              
+
               <Button asChild variant="ghost" className="justify-start w-fit h-auto p-0">
                 <a href="https://youtube.com/@neoartifex" target="_blank" rel="noopener noreferrer" className="flex items-center text-muted-foreground hover:text-primary transition-colors">
                   <Youtube className="h-4 w-4 mr-2" />
                   YouTube
                 </a>
               </Button>
-              
+
               <Button asChild variant="ghost" className="justify-start w-fit h-auto p-0">
                 <a href="https://github.com/nkkko" target="_blank" rel="noopener noreferrer" className="flex items-center text-muted-foreground hover:text-primary transition-colors">
                   <Github className="h-4 w-4 mr-2" />
@@ -74,7 +74,7 @@ export function Footer() {
             </div>
           </div>
         </div>
-        
+
         <div className="border-t border-border mt-8 pt-6 text-muted-foreground">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p>© {currentYear} <a href="https://neoartifex.com" className="hover:text-primary transition-colors">NeoArtifex.com</a>. All rights reserved.</p>

@@ -17,7 +17,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-16 pb-16">
       {/* Hero Section */}
-      <PatternedBackground 
+      <PatternedBackground
         pattern="grid"
         opacity={0.1}
         patternColor="rgba(255,255,255,0.3)"
@@ -25,11 +25,7 @@ export default function Home() {
       >
         <div className="container mx-auto px-4 text-center">
           <SlideUp>
-            <h1 className="text-5xl font-bold mb-3">NeoArtifex: The Modern Artificer&apos;s Guide</h1>
-          </SlideUp>
-          
-          <SlideUp delay={0.1}>
-            <p className="text-lg mb-6 italic">Where technology meets human ingenuity</p>
+            <h1 className="text-5xl font-bold mb-3">The Modern Artificer&apos;s Guide</h1>
           </SlideUp>
 
           <SlideUp delay={0.2}>
@@ -56,7 +52,7 @@ export default function Home() {
             <TextReveal>
               <h2 className="text-3xl font-bold mb-3">The Artificer&apos;s Prompt Library</h2>
             </TextReveal>
-            
+
             <TextReveal delay={0.1}>
               <h3 className="text-xl font-semibold mb-6">Master the Language of AI</h3>
             </TextReveal>
@@ -112,8 +108,8 @@ export default function Home() {
 
       {/* About Section */}
       <ScrollReveal>
-        <PatternedBackground 
-          pattern="dots" 
+        <PatternedBackground
+          pattern="dots"
           opacity={0.1}
           patternColor="currentColor"
           className="bg-muted/30 py-16"
@@ -123,13 +119,13 @@ export default function Home() {
               <TextReveal>
                 <h2 className="text-3xl font-bold mb-3">The New Artificers&apos; Movement</h2>
               </TextReveal>
-              
+
               <TextReveal delay={0.1}>
                 <p className="mb-6">
                   NeoArtifex—a modern craftsperson wielding AI as their chisel and code as their canvas.
                 </p>
               </TextReveal>
-              
+
               <TextReveal delay={0.2}>
                 <p className="mb-6">
                   This is for the makers, the builders, the problem solvers. Those driven by the desire to create
@@ -141,7 +137,7 @@ export default function Home() {
               <TextReveal delay={0.3}>
                 <p className="font-semibold mb-3">At NeoArtifex, we believe:</p>
               </TextReveal>
-              
+
               <StaggerContainer staggerDelay={0.1} containerDelay={0.4}>
                 <ul className="list-disc pl-6 mb-6 space-y-2">
                   <StaggerItem>
@@ -224,8 +220,8 @@ export default function Home() {
 
       {/* Featured Explorations */}
       <ScrollReveal>
-        <PatternedBackground 
-          pattern="grid" 
+        <PatternedBackground
+          pattern="grid"
           opacity={0.2}
           patternColor="currentColor"
           className="bg-muted/30 py-16"
@@ -234,7 +230,7 @@ export default function Home() {
             <TextReveal>
               <h2 className="text-3xl font-bold mb-3 text-center">Featured Explorations</h2>
             </TextReveal>
-            
+
             <TextReveal delay={0.1}>
               <h3 className="text-xl font-semibold mb-12 text-center">Current Investigations</h3>
             </TextReveal>
@@ -273,7 +269,7 @@ export default function Home() {
                 </ScaleOnHover>
               </StaggerItem>
             </StaggerContainer>
-            
+
             <FadeIn delay={0.6}>
               <blockquote className="border-l-4 border-primary pl-4 italic max-w-2xl mx-auto mt-12 text-center">
                 "The artificer knows that tools themselves are neutral—it is the intention, skill, and wisdom of the maker that matters."
@@ -303,8 +299,8 @@ export default function Home() {
 
       {/* Newsletter Section */}
       <ScrollReveal>
-        <PatternedBackground 
-          pattern="dots" 
+        <PatternedBackground
+          pattern="dots"
           opacity={0.15}
           patternColor="rgba(0,0,0,0.3)"
           className="w-full bg-white dark:bg-black py-12"

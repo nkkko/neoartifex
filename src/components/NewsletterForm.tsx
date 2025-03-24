@@ -69,7 +69,7 @@ export function NewsletterForm() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-2">
           {/* Email and Submit Button Row */}
