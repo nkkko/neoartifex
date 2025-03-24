@@ -17,9 +17,12 @@ export function PromptRow({ prompt }: PromptRowProps) {
     >
       <div className="flex flex-col sm:flex-row justify-between gap-4 p-4 border-b">
         <div className="flex-1">
-          <div className="flex justify-between items-start mb-1">
-            <h3 className="text-lg font-medium mr-2">{prompt.title}</h3>
-            <div className="flex flex-col gap-1 ml-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-lg font-medium mr-2 mb-1">{prompt.title}</h3>
+              <div className="text-muted-foreground text-sm mb-2">{prompt.description}</div>
+            </div>
+            <div className="flex flex-col gap-1 ml-3 flex-shrink-0">
               <div className="flex items-center gap-1">
                 <CopyPromptButton slug={prompt.slug || ''} className="flex-shrink-0" />
                 <StarButton slug={prompt.slug || ''} className="flex-shrink-0" />
@@ -29,8 +32,6 @@ export function PromptRow({ prompt }: PromptRowProps) {
               </div>
             </div>
           </div>
-          
-          <div className="text-muted-foreground text-sm mb-2">{prompt.description}</div>
           
           <div className="flex flex-wrap gap-2">
             {prompt.tags?.map((tag) => (
