@@ -6,14 +6,24 @@ import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 
 export function NewsletterForm() {
-  const [email, setEmail] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+  });
+  const [showNameFields, setShowNameFields] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !email.includes('@')) {
+    if (!formData.email || !formData.email.includes('@')) {
       setMessage({
         text: 'Please enter a valid email address',
         type: 'error'
@@ -30,13 +40,14 @@ export function NewsletterForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
       
       if (response.ok) {
-        setEmail('');
+        setFormData({ email: '', firstName: '', lastName: '' });
+        setShowNameFields(false);
         setMessage({
           text: 'Thank you for subscribing to the Artificer\'s Guild!',
           type: 'success'
@@ -60,7 +71,8 @@ export function NewsletterForm() {
   return (
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col gap-2">
+          {/* Email Field */}
           <motion.div 
             className="flex-grow"
             initial={{ opacity: 0, x: -20 }}
@@ -69,33 +81,78 @@ export function NewsletterForm() {
           >
             <Input
               type="email"
+              name="email"
               placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleChange}
               disabled={isSubmitting}
               className="w-full"
               required
             />
           </motion.div>
           
-          <motion.div
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="sm:flex-shrink-0"
-          >
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="w-full"
+          {/* Name Fields (conditionally displayed) */}
+          {showNameFields && (
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              transition={{ duration: 0.3 }}
             >
-              {isSubmitting ? 'Joining...' : 'JOIN THE GUILD'}
-            </Button>
-          </motion.div>
+              <Input
+                type="text"
+                name="firstName"
+                placeholder="First name (optional)"
+                value={formData.firstName}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+              <Input
+                type="text"
+                name="lastName"
+                placeholder="Last name (optional)"
+                value={formData.lastName}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+            </motion.div>
+          )}
+          
+          <div className="flex justify-between items-center">
+            {/* Toggle for name fields */}
+            {!showNameFields && !isSubmitting && !message?.type === 'success' && (
+              <motion.button
+                type="button"
+                onClick={() => setShowNameFields(true)}
+                className="text-xs text-primary/70 hover:text-primary"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                + Add your name (optional)
+              </motion.button>
+            )}
+            
+            {/* Submit Button */}
+            <motion.div
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="ml-auto"
+            >
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Joining...' : 'JOIN THE GUILD'}
+              </Button>
+            </motion.div>
+          </div>
         </div>
         
+        {/* Success/Error Message */}
         {message && (
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
