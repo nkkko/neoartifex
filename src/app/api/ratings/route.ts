@@ -115,7 +115,7 @@ export async function GET() {
     // Calculate scores for any ratings that don't have them
     for (const slug in ratings) {
       const rating = ratings[slug];
-      if (rating.score === undefined) {
+      if (rating && rating.score === undefined) {
         rating.score = rating.like - rating.dislike;
         // Save the updated rating with score
         await KV.setRating(slug, rating);
@@ -151,7 +151,8 @@ export async function POST(request: NextRequest) {
       throw new Error(result.error || 'Failed to get current rating');
     }
     
-    const rating = result.data;
+    // We know rating is defined because getRating always returns a default if not found
+    const rating = result.data as Rating;
     
     // Update the appropriate counter
     if (liked === true) {
