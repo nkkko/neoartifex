@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PromptCard } from '@/components/PromptCard';
 import { PromptRow } from '@/components/PromptRow';
 import { FilterSettings } from '@/components/FilterSettings';
@@ -96,6 +96,24 @@ export default function PromptsPage() {
   const [sortOption, setSortOption] = useState<string>('newest');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [ratings, setRatings] = useState<Record<string, { like: number; dislike: number; score: number }>>({});
+  
+  // Use refs to avoid infinite loops in useEffect
+  const sortOptionRef = useRef(sortOption);
+  const favoritesRef = useRef(favorites);
+  const ratingsRef = useRef(ratings);
+
+  // Update refs when state changes
+  useEffect(() => {
+    sortOptionRef.current = sortOption;
+  }, [sortOption]);
+  
+  useEffect(() => {
+    favoritesRef.current = favorites;
+  }, [favorites]);
+  
+  useEffect(() => {
+    ratingsRef.current = ratings;
+  }, [ratings]);
 
   useEffect(() => {
     // Load display preferences from sessionStorage
@@ -110,6 +128,7 @@ export default function PromptsPage() {
         
         if (savedSortOption) {
           setSortOption(savedSortOption);
+          sortOptionRef.current = savedSortOption;
         }
       } catch (error) {
         console.error('Error loading display preferences:', error);
@@ -129,7 +148,10 @@ export default function PromptsPage() {
         }
         
         const data = await promptsResponse.json();
-        setPrompts(data);
+        // Use setTimeout to avoid render loop
+        setTimeout(() => {
+          setPrompts(data);
+        }, 0);
         
         const tags = new Set<string>();
         data.forEach((prompt: Partial<Prompt>) => {
@@ -148,16 +170,25 @@ export default function PromptsPage() {
         if (ratingsResponse.ok) {
           const ratingsResult = await ratingsResponse.json();
           ratingsData = ratingsResult.ratings || {};
-          setRatings(ratingsData);
+          // Only set ratings after initial render to avoid infinite loop
+          setTimeout(() => {
+            setRatings(ratingsData);
+          }, 0);
         }
         
         // Initial prompt sorting will happen after the data is loaded 
         // and the saved sort option has been applied
         const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
+        const currentFavorites = savedFavorites ? JSON.parse(savedFavorites) : [];
+        
+        // Update refs for consistency
+        sortOptionRef.current = currentSortOption;
+        favoritesRef.current = currentFavorites;
+        
         const sortedData = sortPrompts(
           data, 
           currentSortOption, 
-          savedFavorites ? JSON.parse(savedFavorites) : [],
+          currentFavorites,
           ratingsData
         );
         setFilteredPrompts(sortedData);
@@ -191,9 +222,9 @@ export default function PromptsPage() {
             setRatings(ratingsData);
             
             // Re-sort the prompts if the sort option is 'likes'
-            if (sortOption === 'likes') {
+            if (sortOptionRef.current === 'likes') {
               setFilteredPrompts(prevPrompts => 
-                sortPrompts(prevPrompts, sortOption, favorites, ratingsData)
+                sortPrompts(prevPrompts, sortOptionRef.current, favoritesRef.current, ratingsData)
               );
             }
           }
@@ -207,7 +238,7 @@ export default function PromptsPage() {
 
     // Poll for rating updates every 30 seconds if sort option is 'likes'
     let ratingsPollInterval: NodeJS.Timeout | null = null;
-    if (sortOption === 'likes') {
+    if (sortOptionRef.current === 'likes') {
       ratingsPollInterval = setInterval(handleRatingsUpdate, 30000);
     }
     
@@ -223,7 +254,7 @@ export default function PromptsPage() {
         clearInterval(ratingsPollInterval);
       }
     };
-  }, [sortOption, favorites]);
+  }, []);
 
   // Use useCallback to memoize handlers
   const handleFilterChange = useCallback((selectedTags: string[]) => {
@@ -236,9 +267,14 @@ export default function PromptsPage() {
     }
     
     // Re-apply the current sort order to the filtered prompts
-    const sorted = sortPrompts(filtered, sortOption, favorites, ratings);
+    const sorted = sortPrompts(
+      filtered, 
+      sortOptionRef.current, 
+      favoritesRef.current, 
+      ratingsRef.current
+    );
     setFilteredPrompts(sorted);
-  }, [prompts, sortOption, favorites, ratings]);
+  }, [prompts]);
 
   const handleSortChange = useCallback((option: string) => {
     // Save sort option to sessionStorage
@@ -249,10 +285,13 @@ export default function PromptsPage() {
     }
     
     setSortOption(option);
+    sortOptionRef.current = option;
     
     // Use the sortPrompts helper function for consistent sorting
-    setFilteredPrompts(prevPrompts => sortPrompts(prevPrompts, option, favorites, ratings));
-  }, [favorites, ratings]);
+    setFilteredPrompts(prevPrompts => 
+      sortPrompts(prevPrompts, option, favoritesRef.current, ratingsRef.current)
+    );
+  }, []);
   
   const handleViewChange = useCallback((view: 'grid' | 'list') => {
     // Save view mode to sessionStorage
