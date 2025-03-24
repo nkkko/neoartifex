@@ -37,16 +37,13 @@ export function PromptCard({ prompt }: PromptCardProps) {
             ))}
           </div>
         </CardContent>
-        <CardFooter className="flex flex-wrap justify-between items-center">
-          {prompt.author && (
-            <span className="mr-auto text-sm text-muted-foreground">By: {prompt.author}</span>
-          )}
-          {prompt.version && prompt.version > 1 && (
-            <Badge variant="outline" className="border-primary text-primary ml-auto">
+        {prompt.version && prompt.version > 1 && (
+          <CardFooter className="flex justify-end">
+            <Badge variant="outline" className="border-primary text-primary">
               v{prompt.version}
             </Badge>
-          )}
-        </CardFooter>
+          </CardFooter>
+        )}
       </Card>
     </Link>
   );

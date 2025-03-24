@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Prompt } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { User } from 'lucide-react';
 import { StarButton } from '@/components/StarButton';
 import { CopyPromptButton } from '@/components/CopyPromptButton';
 
@@ -33,19 +32,13 @@ export function PromptRow({ prompt }: PromptRowProps) {
             ))}
           </div>
         </div>
-        <div className="flex flex-row sm:flex-col gap-3 items-end justify-end text-xs text-muted-foreground sm:min-w-[120px]">
-          {prompt.author && (
-            <div className="flex items-center gap-1">
-              <User size={14} />
-              {prompt.author}
-            </div>
-          )}
-          {prompt.version && prompt.version > 1 && (
+        {prompt.version && prompt.version > 1 && (
+          <div className="flex items-end justify-end">
             <Badge variant="outline" className="text-xs border-primary text-primary">
               v{prompt.version}
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Link>
   );
