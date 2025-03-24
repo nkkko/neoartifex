@@ -1,7 +1,9 @@
-import { initializeKV } from './lib/cloudflare-kv';
+import { initializeKV, Env } from './lib/cloudflare-kv';
 
-export interface Env {
-  NEOARTIFEX_KV: KVNamespace;
+// Define ExecutionContext type for Cloudflare Workers
+interface ExecutionContext {
+  waitUntil(promise: Promise<any>): void;
+  passThroughOnException(): void;
 }
 
 export default {
@@ -37,11 +39,13 @@ async function handleRatingsAPI(request: Request): Promise<Response> {
     // Handle different HTTP methods
     if (request.method === 'GET') {
       // Dynamically import the ratings handler to avoid including Next.js specific code
-      const { GET } = await import('./app/api/ratings/route');
-      return GET();
+      const routeModule = await import('./app/api/ratings/route');
+      // @ts-ignore - Next.js API route structure
+      return routeModule.GET();
     } else if (request.method === 'POST') {
-      const { POST } = await import('./app/api/ratings/route');
-      return POST(request as any);
+      const routeModule = await import('./app/api/ratings/route');
+      // @ts-ignore - Next.js API route structure
+      return routeModule.POST(request);
     }
     
     // Method not allowed

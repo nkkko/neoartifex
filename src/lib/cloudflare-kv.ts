@@ -1,10 +1,17 @@
 // Implementation for Cloudflare KV
 
+// Define KVNamespace interface for type safety in Next.js environment
+interface KVNamespace {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
 export interface Env {
   NEOARTIFEX_KV: KVNamespace;
 }
 
-let kvNamespace: KVNamespace;
+let kvNamespace: KVNamespace | null = null;
 
 export const initializeKV = (env: Env) => {
   kvNamespace = env.NEOARTIFEX_KV;

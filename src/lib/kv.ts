@@ -10,10 +10,14 @@ let initializeKV: ((env: any) => void) | null = null;
 // In other environments, we'll use the mock implementation
 try {
   // Check if we're in a Cloudflare Worker environment
-  if (typeof globalThis.WorkerGlobalScope !== 'undefined') {
-    const cloudflareModule = require('./cloudflare-kv');
-    cloudflareKV = cloudflareModule.kv;
-    initializeKV = cloudflareModule.initializeKV;
+  // We can't directly check for WorkerGlobalScope in Next.js, so we'll use a different approach
+  // In a real Cloudflare Worker, this would be set by the Cloudflare runtime
+  if (typeof process === 'undefined' || process.env.CLOUDFLARE_WORKER === 'true') {
+    // Use dynamic import to avoid issues with Next.js static analysis
+    import('./cloudflare-kv').then(cloudflareModule => {
+      cloudflareKV = cloudflareModule.kv;
+      initializeKV = cloudflareModule.initializeKV;
+    });
   }
 } catch (error) {
   console.warn('Not in a Cloudflare Worker environment, using mock KV');
