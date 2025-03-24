@@ -1,28 +1,26 @@
-// Unified KV interface that works with both local development and Cloudflare Workers
+// Unified KV interface that works with both local development and Cloudflare KV
 import { kv as mockKV } from './mock-kv';
+import { cloudflareKV } from './cloudflare-kv-api';
 
-// Dynamic import for Cloudflare KV implementation
-// This allows the code to run in both browser and Cloudflare Worker environments
-let cloudflareKV: typeof mockKV | null = null;
-let initializeKV: ((env: any) => void) | null = null;
+// Determine which KV implementation to use
+let activeKV: typeof mockKV;
 
-// In a Cloudflare Worker environment, this will be properly initialized
-// In other environments, we'll use the mock implementation
-try {
-  // Check if we're in a Cloudflare Worker environment
-  // We can't directly check for WorkerGlobalScope in Next.js, so we'll use a different approach
-  // In a real Cloudflare Worker, this would be set by the Cloudflare runtime
-  if (typeof process === 'undefined' || process.env.CLOUDFLARE_WORKER === 'true') {
-    // Use dynamic import to avoid issues with Next.js static analysis
-    import('./cloudflare-kv').then(cloudflareModule => {
-      cloudflareKV = cloudflareModule.kv;
-      initializeKV = cloudflareModule.initializeKV;
-    });
-  }
-} catch (error) {
-  console.warn('Not in a Cloudflare Worker environment, using mock KV');
+// In development, use the mock KV
+// In production on Vercel, use the Cloudflare KV API client
+if (process.env.NODE_ENV === 'production' && cloudflareKV.isConfigured()) {
+  activeKV = cloudflareKV;
+  console.log('Using Cloudflare KV API');
+} else {
+  activeKV = mockKV;
+  console.log('Using mock KV implementation');
 }
 
-// Export the appropriate KV implementation
-export const kv = cloudflareKV || mockKV;
-export { initializeKV };
+// Export the KV interface
+export const kv = activeKV;
+
+// For Cloudflare Workers, we'll keep this for compatibility
+// but it won't be used in Vercel functions
+export const initializeKV = (env: any): void => {
+  // This function is a no-op in Vercel functions
+  // It's only used when running in a Cloudflare Worker
+};
