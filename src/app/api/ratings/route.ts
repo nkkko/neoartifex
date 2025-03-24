@@ -4,6 +4,7 @@ import { kv } from '@/lib/kv';
 type Rating = {
   like: number; // Count of likes
   dislike: number; // Count of dislikes
+  score?: number; // Calculated score (likes - dislikes)
 };
 
 interface KVOperation {
@@ -47,7 +48,19 @@ export async function GET() {
       throw new Error(result.error || 'Failed to fetch ratings');
     }
     
-    const ratings = result.data || {};
+    const ratings: Record<string, Rating> = result.data || {};
+    
+    // Calculate scores for any ratings that don't have them
+    for (const slug in ratings) {
+      const rating = ratings[slug];
+      if (rating.score === undefined) {
+        rating.score = rating.like - rating.dislike;
+      }
+    }
+    
+    // Save the updated ratings with scores if needed
+    await KV.set('ratings', ratings);
+    
     return NextResponse.json({ ratings });
   } catch (error) {
     console.error('Error fetching ratings:', error);
@@ -83,6 +96,9 @@ export async function POST(request: NextRequest) {
     } else if (liked === false) {
       rating.dislike += 1;
     }
+    
+    // Calculate the score (likes - dislikes)
+    rating.score = rating.like - rating.dislike;
     
     // Save the updated rating
     ratings[slug] = rating;

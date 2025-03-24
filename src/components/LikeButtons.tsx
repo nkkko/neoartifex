@@ -57,6 +57,11 @@ const saveRating = (slug: string, liked: boolean | null) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ slug, liked })
+      }).then(response => {
+        if (response.ok) {
+          // Dispatch a custom event that the page can listen for
+          window.dispatchEvent(new CustomEvent('rating-submitted'));
+        }
       });
     } catch (error) {
       console.error('Error sending rating to server:', error);
@@ -66,12 +71,36 @@ const saveRating = (slug: string, liked: boolean | null) => {
   }
 };
 
+interface ServerRating {
+  like: number;
+  dislike: number;
+  score: number;
+}
+
 export function LikeButtons({ slug, className }: LikeButtonsProps) {
   const [rating, setRating] = useState<PromptRating>({ liked: null, count: 0 });
+  const [serverRating, setServerRating] = useState<ServerRating | null>(null);
   
-  // Load initial state from localStorage
+  // Load initial state from localStorage and fetch server ratings
   useEffect(() => {
     setRating(getRating(slug));
+    
+    // Fetch current ratings from server
+    const fetchRatings = async () => {
+      try {
+        const response = await fetch('/api/ratings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ratings && data.ratings[slug]) {
+            setServerRating(data.ratings[slug]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching ratings:', error);
+      }
+    };
+    
+    fetchRatings();
   }, [slug]);
   
   const handleRate = (liked: boolean, e: React.MouseEvent) => {
@@ -83,10 +112,46 @@ export function LikeButtons({ slug, className }: LikeButtonsProps) {
     const newValue = rating.liked === liked ? null : liked;
     setRating(prev => ({ ...prev, liked: newValue, count: prev.count + 1 }));
     saveRating(slug, newValue);
+    
+    // Update local score preview (optimistic UI update)
+    if (serverRating) {
+      const updatedRating = { ...serverRating };
+      
+      // If we're changing from like to dislike or vice versa, adjust both counters
+      if (rating.liked === true && newValue === false) {
+        // Changing from like to dislike
+        updatedRating.like = Math.max(0, updatedRating.like - 1);
+        updatedRating.dislike += 1;
+      } else if (rating.liked === false && newValue === true) {
+        // Changing from dislike to like
+        updatedRating.dislike = Math.max(0, updatedRating.dislike - 1);
+        updatedRating.like += 1;
+      } else if (rating.liked === null && newValue === true) {
+        // New like
+        updatedRating.like += 1;
+      } else if (rating.liked === null && newValue === false) {
+        // New dislike
+        updatedRating.dislike += 1;
+      } else if (rating.liked === true && newValue === null) {
+        // Removing like
+        updatedRating.like = Math.max(0, updatedRating.like - 1);
+      } else if (rating.liked === false && newValue === null) {
+        // Removing dislike
+        updatedRating.dislike = Math.max(0, updatedRating.dislike - 1);
+      }
+      
+      // Update score
+      updatedRating.score = updatedRating.like - updatedRating.dislike;
+      setServerRating(updatedRating);
+    }
   };
 
+  // Calculate the score to display
+  const score = serverRating?.score || 0;
+  const scoreColor = score > 0 ? "text-green-500" : score < 0 ? "text-red-500" : "text-gray-500";
+
   return (
-    <div className={cn("flex items-center space-x-1", className)}>
+    <div className={cn("flex items-center space-x-2", className)}>
       <Button
         variant="ghost"
         size="icon"
@@ -101,6 +166,12 @@ export function LikeButtons({ slug, className }: LikeButtonsProps) {
           )} 
         />
       </Button>
+      
+      {/* Score display */}
+      <span className={cn("text-sm font-medium", scoreColor)}>
+        {score}
+      </span>
+      
       <Button
         variant="ghost"
         size="icon"

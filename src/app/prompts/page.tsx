@@ -13,7 +13,8 @@ import { Prompt } from '@/types';
 const sortPrompts = (
   prompts: Partial<Prompt>[], 
   sortOption: string, 
-  favorites: string[]
+  favorites: string[],
+  ratings: Record<string, { like: number; dislike: number; score: number }> = {}
 ): Partial<Prompt>[] => {
   const sortedPrompts = [...prompts];
   
@@ -32,6 +33,29 @@ const sortPrompts = (
         
         // Favorited items come first
         return aIsFavorited ? -1 : 1;
+      });
+      break;
+    case 'likes':
+      // Sort by like score (likes - dislikes)
+      sortedPrompts.sort((a, b) => {
+        const aScore = ratings[a.slug || '']?.score || 0;
+        const bScore = ratings[b.slug || '']?.score || 0;
+        
+        if (bScore === aScore) {
+          // If scores are equal, sort by total engagement (likes + dislikes)
+          const aEngagement = (ratings[a.slug || '']?.like || 0) + (ratings[a.slug || '']?.dislike || 0);
+          const bEngagement = (ratings[b.slug || '']?.like || 0) + (ratings[b.slug || '']?.dislike || 0);
+          
+          if (bEngagement === aEngagement) {
+            // If engagement is also equal, sort by newest
+            if (!a.created || !b.created) return 0;
+            return new Date(b.created).getTime() - new Date(a.created).getTime();
+          }
+          
+          return bEngagement - aEngagement;
+        }
+        
+        return bScore - aScore; // Higher scores first
       });
       break;
     case 'newest':
@@ -71,6 +95,7 @@ export default function PromptsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortOption, setSortOption] = useState<string>('newest');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [ratings, setRatings] = useState<Record<string, { like: number; dislike: number; score: number }>>({});
 
   useEffect(() => {
     // Load display preferences from sessionStorage
@@ -93,13 +118,17 @@ export default function PromptsPage() {
 
     async function fetchPrompts() {
       try {
-        const response = await fetch('/api/prompts');
+        // Fetch prompts and ratings in parallel
+        const [promptsResponse, ratingsResponse] = await Promise.all([
+          fetch('/api/prompts'),
+          fetch('/api/ratings')
+        ]);
         
-        if (!response.ok) {
+        if (!promptsResponse.ok) {
           throw new Error('Failed to fetch prompts');
         }
         
-        const data = await response.json();
+        const data = await promptsResponse.json();
         setPrompts(data);
         
         const tags = new Set<string>();
@@ -114,10 +143,23 @@ export default function PromptsPage() {
           setFavorites(JSON.parse(savedFavorites));
         }
         
+        // Load ratings if available
+        let ratingsData = {};
+        if (ratingsResponse.ok) {
+          const ratingsResult = await ratingsResponse.json();
+          ratingsData = ratingsResult.ratings || {};
+          setRatings(ratingsData);
+        }
+        
         // Initial prompt sorting will happen after the data is loaded 
         // and the saved sort option has been applied
         const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
-        const sortedData = sortPrompts(data, currentSortOption, savedFavorites ? JSON.parse(savedFavorites) : []);
+        const sortedData = sortPrompts(
+          data, 
+          currentSortOption, 
+          savedFavorites ? JSON.parse(savedFavorites) : [],
+          ratingsData
+        );
         setFilteredPrompts(sortedData);
       } catch (error) {
         console.error('Error fetching prompts:', error);
@@ -138,25 +180,65 @@ export default function PromptsPage() {
       }
     };
 
+    // Create a custom event for rating updates
+    const handleRatingsUpdate = () => {
+      const fetchLatestRatings = async () => {
+        try {
+          const response = await fetch('/api/ratings');
+          if (response.ok) {
+            const data = await response.json();
+            const ratingsData = data.ratings || {};
+            setRatings(ratingsData);
+            
+            // Re-sort the prompts if the sort option is 'likes'
+            if (sortOption === 'likes') {
+              setFilteredPrompts(prevPrompts => 
+                sortPrompts(prevPrompts, sortOption, favorites, ratingsData)
+              );
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching updated ratings:', error);
+        }
+      };
+      
+      fetchLatestRatings();
+    };
+
+    // Poll for rating updates every 30 seconds if sort option is 'likes'
+    let ratingsPollInterval: NodeJS.Timeout | null = null;
+    if (sortOption === 'likes') {
+      ratingsPollInterval = setInterval(handleRatingsUpdate, 30000);
+    }
+    
     window.addEventListener('favorites-updated', handleFavoritesUpdate);
+    
+    // Custom event for when a new rating is submitted
+    window.addEventListener('rating-submitted', handleRatingsUpdate);
     
     return () => {
       window.removeEventListener('favorites-updated', handleFavoritesUpdate);
+      window.removeEventListener('rating-submitted', handleRatingsUpdate);
+      if (ratingsPollInterval) {
+        clearInterval(ratingsPollInterval);
+      }
     };
-  }, []);
+  }, [sortOption, favorites]);
 
   // Use useCallback to memoize handlers
   const handleFilterChange = useCallback((selectedTags: string[]) => {
-    if (selectedTags.length === 0) {
-      setFilteredPrompts(prompts);
-    } else {
-      setFilteredPrompts(
-        prompts.filter(prompt => 
-          selectedTags.every(tag => prompt.tags?.includes(tag))
-        )
+    let filtered = prompts;
+    
+    if (selectedTags.length > 0) {
+      filtered = prompts.filter(prompt => 
+        selectedTags.every(tag => prompt.tags?.includes(tag))
       );
     }
-  }, [prompts]);
+    
+    // Re-apply the current sort order to the filtered prompts
+    const sorted = sortPrompts(filtered, sortOption, favorites, ratings);
+    setFilteredPrompts(sorted);
+  }, [prompts, sortOption, favorites, ratings]);
 
   const handleSortChange = useCallback((option: string) => {
     // Save sort option to sessionStorage
@@ -169,8 +251,8 @@ export default function PromptsPage() {
     setSortOption(option);
     
     // Use the sortPrompts helper function for consistent sorting
-    setFilteredPrompts(prevPrompts => sortPrompts(prevPrompts, option, favorites));
-  }, [favorites]);
+    setFilteredPrompts(prevPrompts => sortPrompts(prevPrompts, option, favorites, ratings));
+  }, [favorites, ratings]);
   
   const handleViewChange = useCallback((view: 'grid' | 'list') => {
     // Save view mode to sessionStorage
