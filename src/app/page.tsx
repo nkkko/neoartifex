@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { NewsletterForm } from '@/components/NewsletterForm';
 
 export default function Home() {
   return (
@@ -167,13 +168,17 @@ export default function Home() {
             The artificers of this age will build with intelligence itself.
           </p>
           
-          <p className="mb-8 text-xl font-semibold">Will you be among them?</p>
+          <p className="mb-6 text-xl font-semibold">Will you be among them?</p>
           
-          <Button asChild size="lg">
-            <Link href="/prompts">BECOME AN ARTIFICER</Link>
-          </Button>
+          <div className="bg-muted/50 p-6 rounded-lg mb-10">
+            <h3 className="text-xl font-semibold mb-4">Join the Artificer's Guild Newsletter</h3>
+            <p className="text-muted-foreground mb-6">
+              Receive weekly insights, tool discoveries, and artificer techniques directly to your inbox.
+            </p>
+            <NewsletterForm />
+          </div>
           
-          <blockquote className="border-l-4 border-primary pl-4 italic max-w-2xl mx-auto mt-12 text-center">
+          <blockquote className="border-l-4 border-primary pl-4 italic max-w-2xl mx-auto mt-8 text-center">
             "The artificer knows that tools themselves are neutral—it is the intention, skill, and wisdom of the maker that matters."
           </blockquote>
         </div>
