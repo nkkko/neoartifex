@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@/lib/kv';
+import { cloudflareKV } from '@/lib/cloudflare-kv-api';
 
 type Rating = {
   like: number; // Count of likes
@@ -7,33 +8,94 @@ type Rating = {
   score?: number; // Calculated score (likes - dislikes)
 };
 
-interface KVOperation {
+interface KVOperation<T = any> {
   success: boolean;
-  data?: any;
+  data?: T;
   error?: string;
 }
 
+// Key prefix for ratings
+const RATINGS_PREFIX = 'ratings:';
+
+// Helper to create a full key for a prompt
+const getRatingKey = (slug: string) => `${RATINGS_PREFIX}${slug}`;
+
 // KV operations wrapper
 const KV = {
-  // Get a value from KV store
-  async get(key: string): Promise<KVOperation> {
+  // Get a single rating by slug
+  async getRating(slug: string): Promise<KVOperation<Rating>> {
     try {
+      const key = getRatingKey(slug);
       const value = await kv.get(key);
-      return { success: true, data: value };
+      return { 
+        success: true, 
+        data: value || { like: 0, dislike: 0, score: 0 }
+      };
     } catch (error) {
-      console.error('Error reading from KV:', error);
-      return { success: false, error: 'Failed to read from KV store' };
+      console.error(`Error reading rating for ${slug}:`, error);
+      return { 
+        success: false, 
+        error: `Failed to read rating for ${slug}`
+      };
     }
   },
   
-  // Set a value in KV store
-  async set(key: string, value: any): Promise<KVOperation> {
+  // Set a rating for a specific slug
+  async setRating(slug: string, rating: Rating): Promise<KVOperation> {
     try {
-      await kv.set(key, value);
+      const key = getRatingKey(slug);
+      await kv.set(key, rating);
       return { success: true };
     } catch (error) {
-      console.error('Error writing to KV:', error);
-      return { success: false, error: 'Failed to write to KV store' };
+      console.error(`Error saving rating for ${slug}:`, error);
+      return { 
+        success: false, 
+        error: `Failed to save rating for ${slug}`
+      };
+    }
+  },
+  
+  // Get all ratings
+  async getAllRatings(): Promise<KVOperation<Record<string, Rating>>> {
+    try {
+      // If we're using Cloudflare KV API, we can use listKeys with a prefix
+      if (typeof cloudflareKV !== 'undefined' && cloudflareKV.isConfigured && cloudflareKV.isConfigured() && cloudflareKV.listKeys) {
+        // Get all keys with the ratings prefix
+        const keys = await cloudflareKV.listKeys(RATINGS_PREFIX);
+        
+        // Fetch all ratings in parallel
+        const ratingPromises = keys.map(async (key) => {
+          const slug = key.replace(RATINGS_PREFIX, '');
+          const ratingData = await kv.get(key);
+          return { slug, rating: ratingData };
+        });
+        
+        // Wait for all fetches to complete
+        const ratingsData = await Promise.all(ratingPromises);
+        
+        // Convert to record format
+        const ratings: Record<string, Rating> = {};
+        ratingsData.forEach(item => {
+          if (item.rating) {
+            ratings[item.slug] = item.rating;
+          }
+        });
+        
+        return { success: true, data: ratings };
+      } else {
+        // Fallback for other environments - check if we have a legacy 'ratings' key
+        const legacyRatings = await kv.get('ratings');
+        if (legacyRatings && typeof legacyRatings === 'object') {
+          return { success: true, data: legacyRatings };
+        }
+        return { success: true, data: {} };
+      }
+    } catch (error) {
+      console.error('Error fetching all ratings:', error);
+      return { 
+        success: false, 
+        error: 'Failed to fetch all ratings'
+      };
     }
   }
 };
@@ -41,8 +103,8 @@ const KV = {
 // Get all ratings
 export async function GET() {
   try {
-    // Get ratings from KV store
-    const result = await KV.get('ratings');
+    // Get all ratings
+    const result = await KV.getAllRatings();
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to fetch ratings');
@@ -55,11 +117,10 @@ export async function GET() {
       const rating = ratings[slug];
       if (rating.score === undefined) {
         rating.score = rating.like - rating.dislike;
+        // Save the updated rating with score
+        await KV.setRating(slug, rating);
       }
     }
-    
-    // Save the updated ratings with scores if needed
-    await KV.set('ratings', ratings);
     
     return NextResponse.json({ ratings });
   } catch (error) {
@@ -83,12 +144,14 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get current ratings
-    const result = await KV.get('ratings');
-    const ratings: Record<string, Rating> = result.success && result.data ? result.data : {};
+    // Get current rating for this prompt
+    const result = await KV.getRating(slug);
     
-    // Get or initialize rating for this prompt
-    const rating = ratings[slug] || { like: 0, dislike: 0 };
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to get current rating');
+    }
+    
+    const rating = result.data;
     
     // Update the appropriate counter
     if (liked === true) {
@@ -101,8 +164,7 @@ export async function POST(request: NextRequest) {
     rating.score = rating.like - rating.dislike;
     
     // Save the updated rating
-    ratings[slug] = rating;
-    const saveResult = await KV.set('ratings', ratings);
+    const saveResult = await KV.setRating(slug, rating);
     
     if (!saveResult.success) {
       throw new Error(saveResult.error || 'Failed to save rating');

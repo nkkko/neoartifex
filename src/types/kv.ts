@@ -30,4 +30,11 @@ export interface KVInterface {
    * @param by Amount to increment by (default: 1)
    */
   incr(key: string, by?: number): Promise<number>;
+  
+  /**
+   * List keys with a prefix
+   * @param prefix Optional prefix to filter keys
+   * @param limit Maximum number of keys to return
+   */
+  listKeys?(prefix?: string, limit?: number): Promise<string[]>;
 }
