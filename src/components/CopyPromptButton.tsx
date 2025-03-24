@@ -11,7 +11,7 @@ interface CopyPromptButtonProps {
 }
 
 export function CopyPromptButton({ slug, className }: CopyPromptButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   
   const handleCopy = async (e: React.MouseEvent) => {
     // Prevent the link navigation when clicking the copy button
@@ -27,14 +27,21 @@ export function CopyPromptButton({ slug, className }: CopyPromptButtonProps) {
       
       const data = await response.json();
       
+      if (!data.prompt || !data.prompt.content) {
+        console.error('Invalid prompt data:', data);
+        throw new Error('Prompt content not found');
+      }
+      
       // Copy the content to clipboard
-      await navigator.clipboard.writeText(data.content);
+      await navigator.clipboard.writeText(data.prompt.content);
       
       // Show success state briefly
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setStatus('copied');
+      setTimeout(() => setStatus('idle'), 2000);
     } catch (error) {
       console.error('Error copying prompt:', error);
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 2000);
     }
   };
 
@@ -44,9 +51,11 @@ export function CopyPromptButton({ slug, className }: CopyPromptButtonProps) {
       size="icon"
       className={cn("h-8 w-8", className)}
       onClick={handleCopy}
-      title="Copy prompt"
+      title={status === 'error' ? 'Failed to copy' : 'Copy prompt'}
     >
-      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+      {status === 'copied' && <Check className="h-4 w-4 text-green-500" />}
+      {status === 'error' && <Copy className="h-4 w-4 text-red-500" />}
+      {status === 'idle' && <Copy className="h-4 w-4" />}
     </Button>
   );
 }
