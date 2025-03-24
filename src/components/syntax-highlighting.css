@@ -1,0 +1,122 @@
+/* Code block highlighting styles */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: hsl(var(--muted-foreground));
+}
+
+.token.punctuation {
+  color: hsl(var(--foreground));
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: hsl(350 100% 67%);
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: hsl(120, 100%, 31%);
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: hsl(40, 100%, 50%);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: hsl(207, 100%, 72%);
+}
+
+.token.function,
+.token.class-name {
+  color: hsl(29, 100%, 67%);
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: hsl(330, 100%, 70%);
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.dark .token.property,
+.dark .token.tag,
+.dark .token.boolean,
+.dark .token.number,
+.dark .token.constant,
+.dark .token.symbol,
+.dark .token.deleted {
+  color: hsl(350 100% 67%);
+}
+
+.dark .token.selector,
+.dark .token.attr-name,
+.dark .token.string,
+.dark .token.char,
+.dark .token.builtin,
+.dark .token.inserted {
+  color: hsl(120, 70%, 70%);
+}
+
+.dark .token.operator,
+.dark .token.entity,
+.dark .token.url,
+.dark .language-css .token.string,
+.dark .style .token.string {
+  color: hsl(40, 90%, 60%);
+}
+
+.dark .token.atrule,
+.dark .token.attr-value,
+.dark .token.keyword {
+  color: hsl(207, 90%, 72%);
+}
+
+.dark .token.function,
+.dark .token.class-name {
+  color: hsl(29, 90%, 67%);
+}
+
+.dark .token.regex,
+.dark .token.important,
+.dark .token.variable {
+  color: hsl(330, 90%, 70%);
+}
+
+/* Line highlighting */
+.highlight-line {
+  background-color: rgba(200, 200, 255, 0.1);
+  border-left: 2px solid hsl(var(--primary));
+}
+
+.dark .highlight-line {
+  background-color: rgba(200, 200, 255, 0.05);
+}
