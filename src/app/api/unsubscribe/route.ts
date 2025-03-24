@@ -18,11 +18,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the contact from Resend
-    const { data: contacts, error: listError } = await resend.contacts.list({
-      audienceId: AUDIENCE_ID,
-      email: email
+    // Get all contacts from the audience
+    const { data, error: listError } = await resend.contacts.list({
+      audienceId: AUDIENCE_ID
     });
+    
+    // Filter contacts by email
+    const contacts = data?.data?.filter(contact => contact.email === email);
 
     if (listError) {
       console.error('Error finding contact:', listError);

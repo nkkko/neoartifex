@@ -9,10 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 
+import { Prompt } from '@/types';
+
 type FavoriteSettingsProps = {
   onFavoritesChange: (favorites: string[]) => void;
   favorites: string[];
-  allPrompts: Array<{ slug: string; title: string }>;
+  allPrompts: Partial<Prompt>[];
 };
 
 export function FavoriteSettings({
@@ -20,7 +22,9 @@ export function FavoriteSettings({
   onFavoritesChange,
   allPrompts
 }: FavoriteSettingsProps) {
-  const favoritedPrompts = allPrompts.filter(prompt => favorites.includes(prompt.slug));
+  const favoritedPrompts = allPrompts
+    .filter(prompt => prompt.slug && favorites.includes(prompt.slug))
+    .filter(prompt => prompt.title);
   
   const clearFavorites = () => {
     localStorage.setItem('favoritedPrompts', JSON.stringify([]));
@@ -60,7 +64,7 @@ export function FavoriteSettings({
                         href={`/prompts/${prompt.slug}`} 
                         className="text-sm hover:underline flex-1 truncate"
                       >
-                        {prompt.title}
+                        {prompt.title || 'Untitled Prompt'}
                       </Link>
                       <Button 
                         variant="ghost" 
@@ -68,7 +72,9 @@ export function FavoriteSettings({
                         className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.preventDefault();
-                          removeFavorite(prompt.slug);
+                          if (prompt.slug) {
+                            removeFavorite(prompt.slug);
+                          }
                         }}
                       >
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />

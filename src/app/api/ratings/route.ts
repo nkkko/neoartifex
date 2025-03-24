@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Import Vercel KV client if available
-let kv: any;
-try {
-  // This import will only work if @vercel/kv is installed and properly configured
-  kv = require('@vercel/kv');
-} catch (error) {
-  console.warn('Vercel KV not available, using fallback storage');
-}
+import { kv } from '@/lib/mock-kv';
 
 type Rating = {
   like: number; // Count of likes
@@ -20,66 +12,28 @@ interface KVOperation {
   error?: string;
 }
 
-// Create an in-memory store for development fallback
-const inMemoryStore: Record<string, any> = {};
-
-// KV operations with Vercel KV when available, fallback to in-memory/localStorage otherwise
+// KV operations wrapper
 const KV = {
   // Get a value from KV store
   async get(key: string): Promise<KVOperation> {
-    // If Vercel KV is available, use it
-    if (kv) {
-      try {
-        const value = await kv.get(key);
-        return { success: true, data: value };
-      } catch (error) {
-        console.error('Error reading from Vercel KV:', error);
-        return { success: false, error: 'Failed to read from Vercel KV' };
-      }
+    try {
+      const value = await kv.get(key);
+      return { success: true, data: value };
+    } catch (error) {
+      console.error('Error reading from KV:', error);
+      return { success: false, error: 'Failed to read from KV store' };
     }
-    
-    // For client-side development (browser environment)
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        const value = localStorage.getItem(`kv:${key}`);
-        return { success: true, data: value ? JSON.parse(value) : null };
-      } catch (error) {
-        console.error('Error reading from localStorage:', error);
-        return { success: false, error: 'Failed to read from localStorage' };
-      }
-    }
-    
-    // For server-side development (Node.js environment)
-    return { success: true, data: inMemoryStore[key] || null };
   },
   
   // Set a value in KV store
   async set(key: string, value: any): Promise<KVOperation> {
-    // If Vercel KV is available, use it
-    if (kv) {
-      try {
-        await kv.set(key, value);
-        return { success: true };
-      } catch (error) {
-        console.error('Error writing to Vercel KV:', error);
-        return { success: false, error: 'Failed to write to Vercel KV' };
-      }
+    try {
+      await kv.set(key, value);
+      return { success: true };
+    } catch (error) {
+      console.error('Error writing to KV:', error);
+      return { success: false, error: 'Failed to write to KV store' };
     }
-    
-    // For client-side development (browser environment)
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        localStorage.setItem(`kv:${key}`, JSON.stringify(value));
-        return { success: true };
-      } catch (error) {
-        console.error('Error writing to localStorage:', error);
-        return { success: false, error: 'Failed to write to localStorage' };
-      }
-    }
-    
-    // For server-side development (Node.js environment)
-    inMemoryStore[key] = value;
-    return { success: true };
   }
 };
 

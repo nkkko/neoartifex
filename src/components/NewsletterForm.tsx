@@ -140,7 +140,7 @@ export function NewsletterForm() {
           
           {/* Toggle for name fields */}
           <div className="flex justify-start items-center">
-            {!showNameFields && !isSubmitting && !message?.type === 'success' && (
+            {!showNameFields && !isSubmitting && message?.type !== 'success' && (
               <motion.button
                 type="button"
                 onClick={() => setShowNameFields(true)}

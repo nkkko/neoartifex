@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-type PatternType = 'dots' | 'grid';
+type PatternType = 'dots' | 'grid' | 'lines';
 
 interface PatternedBackgroundProps {
   children: React.ReactNode;
@@ -30,6 +30,11 @@ export function PatternedBackground({
         return {
           backgroundImage: `linear-gradient(${patternColor} 1px, transparent 1px), 
                            linear-gradient(90deg, ${patternColor} 1px, transparent 1px)`,
+          backgroundSize: '20px 20px'
+        };
+      case 'lines':
+        return {
+          backgroundImage: `linear-gradient(${patternColor} 1px, transparent 1px)`,
           backgroundSize: '20px 20px'
         };
       default:

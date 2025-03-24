@@ -1,12 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 
-export default function UnsubscribePage() {
+// Loading component for Suspense
+function UnsubscribeLoading() {
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <Card className="max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle>Unsubscribe from the Artificer's Guild</CardTitle>
+          <CardDescription>
+            Loading...
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>Please wait while we load your unsubscribe information...</p>
+        </CardContent>
+        <CardFooter>
+          <Button asChild variant="outline">
+            <Link href="/">Return Home</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
+
+// Unsubscribe content that uses useSearchParams
+function UnsubscribeContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
   
@@ -87,5 +112,14 @@ export default function UnsubscribePage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function UnsubscribePage() {
+  return (
+    <Suspense fallback={<UnsubscribeLoading />}>
+      <UnsubscribeContent />
+    </Suspense>
   );
 }

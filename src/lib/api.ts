@@ -51,16 +51,17 @@ export function getPromptBySlug(slug: string, fields: string[] = []): Partial<Pr
   // Ensure only the requested fields are returned
   fields.forEach((field) => {
     if (field === 'slug') {
-      items[field] = baseSlug;
+      items.slug = baseSlug;
     }
-    if (field === 'content') {
-      items[field] = content;
+    else if (field === 'content') {
+      items.content = content;
     }
-    if (field === 'version') {
-      items[field] = version;
+    else if (field === 'version') {
+      items.version = version;
     }
-    if (data[field]) {
-      items[field] = data[field];
+    else if (data[field]) {
+      // Safely set the field with type assertion
+      (items as any)[field] = data[field];
     }
   });
 
