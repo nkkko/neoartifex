@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { Prompt } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, Tag } from 'lucide-react';
+import { User } from 'lucide-react';
 import { StarButton } from '@/components/StarButton';
+import { CopyPromptButton } from '@/components/CopyPromptButton';
 
 type PromptRowProps = {
   prompt: Partial<Prompt>;
@@ -18,7 +19,10 @@ export function PromptRow({ prompt }: PromptRowProps) {
         <div className="space-y-1 flex-1">
           <div className="flex justify-between items-start">
             <h3 className="text-lg font-medium mr-2">{prompt.title}</h3>
-            <StarButton slug={prompt.slug || ''} className="flex-shrink-0" />
+            <div className="flex items-center gap-1">
+              <CopyPromptButton slug={prompt.slug || ''} className="flex-shrink-0" />
+              <StarButton slug={prompt.slug || ''} className="flex-shrink-0" />
+            </div>
           </div>
           <p className="text-muted-foreground text-sm">{prompt.description}</p>
           <div className="flex flex-wrap gap-2 mt-2">
@@ -30,10 +34,6 @@ export function PromptRow({ prompt }: PromptRowProps) {
           </div>
         </div>
         <div className="flex flex-row sm:flex-col gap-3 items-end justify-end text-xs text-muted-foreground sm:min-w-[120px]">
-          <div className="flex items-center gap-1">
-            <Calendar size={14} />
-            {new Date(prompt.created || '').toLocaleDateString()}
-          </div>
           {prompt.author && (
             <div className="flex items-center gap-1">
               <User size={14} />

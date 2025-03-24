@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StarButton } from '@/components/StarButton';
+import { CopyPromptButton } from '@/components/CopyPromptButton';
 
 type PromptCardProps = {
   prompt: Partial<Prompt>;
@@ -20,7 +21,8 @@ export function PromptCard({ prompt }: PromptCardProps) {
     <Link href={`/prompts/${prompt.slug}`} className="block hover:no-underline transition-transform hover:scale-[1.02]">
       <Card className="h-full hover:border-primary/50">
         <CardHeader className="relative pb-2">
-          <div className="absolute top-4 right-4">
+          <div className="absolute top-4 right-4 flex items-center space-x-1">
+            <CopyPromptButton slug={prompt.slug || ''} />
             <StarButton slug={prompt.slug || ''} />
           </div>
           <CardTitle>{prompt.title}</CardTitle>
@@ -40,13 +42,10 @@ export function PromptCard({ prompt }: PromptCardProps) {
             <span className="mr-auto text-sm text-muted-foreground">By: {prompt.author}</span>
           )}
           {prompt.version && prompt.version > 1 && (
-            <Badge variant="outline" className="border-primary text-primary">
+            <Badge variant="outline" className="border-primary text-primary ml-auto">
               v{prompt.version}
             </Badge>
           )}
-          <span className="ml-auto text-xs text-muted-foreground">
-            {new Date(prompt.created || '').toLocaleDateString()}
-          </span>
         </CardFooter>
       </Card>
     </Link>
