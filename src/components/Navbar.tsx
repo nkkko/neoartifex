@@ -38,6 +38,12 @@ export function Navbar() {
             >
               Prompts
             </Link>
+            <Link 
+              href="/youtube" 
+              className={`hover:text-primary ${pathname.startsWith('/youtube') ? 'font-semibold text-primary' : ''}`}
+            >
+              YouTube
+            </Link>
             <div className="flex items-center space-x-2">
               <Button asChild variant="ghost" size="icon">
                 <Link href="https://github.com/nkkko/neoartifex" target="_blank" aria-label="GitHub">
@@ -78,6 +84,13 @@ export function Navbar() {
               onClick={() => setIsMenuOpen(false)}
             >
               Prompts
+            </Link>
+            <Link 
+              href="/youtube" 
+              className={`block py-2 ${pathname.startsWith('/youtube') ? 'font-semibold text-primary' : ''}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              YouTube
             </Link>
             <div className="flex space-x-2 py-2">
               <Button asChild variant="ghost" size="sm">
