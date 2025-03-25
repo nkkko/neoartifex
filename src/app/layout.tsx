@@ -4,6 +4,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { CloudflareAnalytics } from '@/components/CloudflareAnalytics';
+import { ClarityAnalytics } from '@/components/ClarityAnalytics';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,6 +31,8 @@ export default function RootLayout({
             <Footer />
           </div>
         </ThemeProvider>
+        <CloudflareAnalytics />
+        <ClarityAnalytics />
       </body>
     </html>
   );
