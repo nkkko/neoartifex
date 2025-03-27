@@ -38,10 +38,13 @@ yarn install
 
 3. Set up Cloudflare KV (see [CLOUDFLARE_KV_API.md](CLOUDFLARE_KV_API.md) for details)
 
-4. Add the required environment variables:
+4. Add the required environment variables to your `.env.local` file:
    - `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare account ID
    - `CLOUDFLARE_KV_NAMESPACE_ID`: The ID of your KV namespace
    - `CLOUDFLARE_KV_API_TOKEN`: Your Cloudflare API token
+   - `NEXT_PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN`: Your Cloudflare Analytics token
+   - `NEXT_PUBLIC_CLARITY_PROJECT_ID`: Your Microsoft Clarity project ID
+   - `RESEND_API_KEY`: Your Resend API key for email functionality
 
 5. Run the development server:
 
@@ -116,6 +119,31 @@ The application integrates with:
 
 - Cloudflare Analytics - For page views and performance metrics
 - Microsoft Clarity - For user behavior analytics and session replays
+
+## Deployment on Vercel
+
+### Setting Up Environment Variables in Vercel
+
+When deploying to Vercel, you need to configure the environment variables in the Vercel dashboard:
+
+1. Go to your project in the [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click on the project you want to configure
+3. Navigate to the "Settings" tab
+4. Select "Environment Variables" from the left sidebar
+5. Add each environment variable by entering the name and value, then click "Add"
+6. Add the following environment variables:
+   - `CLOUDFLARE_ACCOUNT_ID`
+   - `CLOUDFLARE_KV_NAMESPACE_ID`
+   - `CLOUDFLARE_KV_API_TOKEN`
+   - `NEXT_PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN`
+   - `NEXT_PUBLIC_CLARITY_PROJECT_ID`
+   - `RESEND_API_KEY`
+7. Click "Save" to apply the changes
+8. Redeploy your application for the changes to take effect
+
+![Vercel Environment Variables](https://vercel.com/docs/storage/images/storage-env-vars.png)
+
+Note: Environment variables prefixed with `NEXT_PUBLIC_` will be exposed to the browser. Only use this prefix for non-sensitive data that needs to be accessed by client-side code.
 
 ## Scripts
 
