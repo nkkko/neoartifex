@@ -25,7 +25,7 @@ export default function Home() {
       >
         <div className="container mx-auto px-4 text-center">
           <SlideUp>
-            <h1 className="text-5xl font-bold mb-3">The Modern Artificer&apos;s Guide</h1>
+            <h1 className="text-5xl font-bold mb-3">The Modern Artificer</h1>
           </SlideUp>
 
           <SlideUp delay={0.2}>

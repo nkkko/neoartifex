@@ -1,16 +1,12 @@
 {
   "mcpServers": {
-    "puppeteer": {
+
+    "playwright": {
       "type": "stdio",
-      "command": "docker",
+      "command": "npx",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--init",
-        "-e",
-        "DOCKER_CONTAINER=true",
-        "mcp/puppeteer"
+        "@playwright/mcp@latest",
+        "--vision"
       ],
       "env": {}
     }
