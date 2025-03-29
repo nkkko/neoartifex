@@ -1,50 +1,25 @@
-import { NextRequest } from 'next/server';
 import { ImageResponse } from 'next/og';
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
+import { NextRequest, NextResponse } from 'next/server';
 
-// Font loading
-const FONT_PATH = path.join(process.cwd(), 'public', 'fonts');
-const interRegular = fs.readFileSync(path.join(FONT_PATH, 'Inter-Regular.ttf'));
-const interBold = fs.readFileSync(path.join(FONT_PATH, 'Inter-Bold.ttf'));
+// Define the runtime for the edge environment
+export const runtime = 'edge';
 
 // This route generates dynamic Open Graph images for prompts
-export async function GET(
-  request: NextRequest,
-  context: { params: { slug: string } }
-) {
-  // Extract slug from the URL path directly to avoid linting error
-  const url = request.url;
-  const pathParts = url.split('/');
-  const promptSlug = pathParts[pathParts.length - 1];
-  
+export async function GET(request: NextRequest) {
   try {
-    // Read the markdown file
-    const promptPath = path.join(process.cwd(), 'prompts', `${promptSlug}.md`);
+    // Extract slug from the URL path
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const slug = pathParts[pathParts.length - 1];
     
-    // Default values in case file reading fails
-    let title = promptSlug;
-    let description = '';
-    let tags: string[] = [];
-    let author = '';
-    let version = '';
-    
-    try {
-      // Read and parse the file with gray-matter
-      const fileContent = fs.readFileSync(promptPath, 'utf8');
-      const { data } = matter(fileContent);
+    // Process the slug to get a decent title (convert hyphens to spaces, capitalize words)
+    const title = slug
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
       
-      // Extract frontmatter
-      title = data.title || title;
-      description = data.description || '';
-      tags = data.tags || [];
-      author = data.author || '';
-      version = data.version ? `v${data.version}` : '';
-    } catch (error) {
-      console.error(`Error reading prompt file for ${promptSlug}:`, error);
-    }
-
+    const description = 'Advanced prompt for modern artificers';
+    const tags = ['prompt', 'AI'];
+    
     // Generate the OG image with custom tailwind-like styling
     return new ImageResponse(
       (
@@ -59,7 +34,7 @@ export async function GET(
             padding: '48px 48px',
             background: 'linear-gradient(to right, #6d28d9, #9333ea)',
             color: 'white',
-            fontFamily: '"Inter"',
+            fontFamily: 'sans-serif',
           }}
         >
           {/* Header */}
@@ -142,7 +117,7 @@ export async function GET(
               marginBottom: '40px',
             }}
           >
-            {tags.slice(0, 4).map((tag, index) => (
+            {tags.map((tag, index) => (
               <span
                 key={index}
                 style={{
@@ -176,12 +151,6 @@ export async function GET(
                 fontSize: '20px',
               }}
             >
-              {author && (
-                <span style={{ display: 'flex' }}>Author: {author}</span>
-              )}
-              {version && (
-                <span style={{ display: 'flex' }}>{version}</span>
-              )}
             </div>
             <span
               style={{
@@ -201,20 +170,6 @@ export async function GET(
       {
         width: 1200,
         height: 630,
-        fonts: [
-          {
-            name: 'Inter',
-            data: interRegular,
-            weight: 400,
-            style: 'normal',
-          },
-          {
-            name: 'Inter',
-            data: interBold,
-            weight: 700,
-            style: 'normal',
-          },
-        ],
       }
     );
   } catch (error) {

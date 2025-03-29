@@ -22,7 +22,7 @@ export async function GET() {
     
     // Get all ratings in a single batch operation
     const promptSlugs = prompts.map(prompt => prompt.slug).filter(Boolean);
-    const ratingsData = {};
+    const ratingsData: Record<string, { like: number; dislike: number; score: number }> = {};
     
     // Fetch all ratings in parallel
     await Promise.all(promptSlugs.map(async (slug) => {
@@ -30,10 +30,12 @@ export async function GET() {
         if (!slug) return;
         const key = getRatingKey(slug);
         const rating = await kv.get(key) || { like: 0, dislike: 0, score: 0 };
-        ratingsData[slug] = rating;
+        ratingsData[slug as string] = rating;
       } catch (err) {
         console.error(`Error fetching rating for ${slug}:`, err);
-        ratingsData[slug] = { like: 0, dislike: 0, score: 0 };
+        if (slug) {
+          ratingsData[slug] = { like: 0, dislike: 0, score: 0 };
+        }
       }
     }));
     
