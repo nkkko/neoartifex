@@ -8,6 +8,7 @@ A Next.js application for managing and displaying LLM (Large Language Model) pro
 - Filter prompts by tags and favorites
 - Sort prompts by date, alphabetically, or by rating
 - Support for prompt versioning
+- Dynamic Open Graph images for social media sharing
 - Interactive prompt ratings system (likes/dislikes)
 - Newsletter subscription feature
 - YouTube video integration
@@ -100,14 +101,28 @@ Users can subscribe to the NeoArtifex newsletter to receive updates about new pr
 
 The `/youtube` page showcases videos from the NeoArtifex YouTube channel on AI tools, prompt engineering, and modern artificer techniques.
 
+### Dynamic Open Graph Images
+
+The application generates dynamic Open Graph images for social media sharing. When users share links to prompts on platforms like Twitter, LinkedIn, or Facebook, those platforms display a rich preview with a custom-generated image that includes:
+
+- The prompt title
+- Description
+- Tags
+- Author and version information
+- NeoArtifex branding
+
+The images are generated on-the-fly using Next.js's built-in `ImageResponse` API and follow a similar style to GitHub repository cards. This enhances the visual appeal of shared content and provides more context about the prompt being shared.
+
 ## Project Structure
 
 - `/prompts` - Markdown files containing prompts
 - `/src/app` - Next.js app router pages
 - `/src/app/api` - API routes for ratings, newsletter, etc.
+- `/src/app/api/og-image` - API routes for Open Graph image generation
 - `/src/components` - React components
 - `/src/lib` - Utility functions and API clients
 - `/src/types` - TypeScript type definitions
+- `/public/fonts` - Font files used for OG image generation
 
 ## Cloudflare Integration
 

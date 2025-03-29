@@ -6,8 +6,11 @@ import { PromptRow } from '@/components/PromptRow';
 import { FilterSettings } from '@/components/FilterSettings';
 import { DisplaySettings } from '@/components/DisplaySettings';
 import { FavoriteSettings } from '@/components/FavoriteSettings';
+import { NewsletterForm } from '@/components/NewsletterForm';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Prompt } from '@/types';
+import { Github, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Cache ratings in localStorage
 const RATINGS_CACHE_KEY = 'cachedServerRatings';
@@ -137,6 +140,10 @@ export default function PromptsPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [ratings, setRatings] = useState<Record<string, { like: number; dislike: number; score: number }>>({});
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(12);
+  
   // Use refs to avoid infinite loops in useEffect
   const sortOptionRef = useRef(sortOption);
   const favoritesRef = useRef(favorites);
@@ -160,24 +167,15 @@ export default function PromptsPage() {
     promptsRef.current = prompts;
   }, [prompts]);
 
-  // Batch fetch ratings for all prompts
-  const fetchAllRatings = useCallback(async (promptSlugs: string[]) => {
+  // Simplified - ratings are now fetched together with prompts
+  const fetchAllRatings = useCallback(async () => {
     try {
-      // Check cache first
-      const cachedData = getCachedRatings();
-      if (cachedData) {
-        setRatings(cachedData.ratings);
-        return cachedData.ratings;
-      }
-      
-      // Fetch from API if not cached
+      // Ratings are now fetched with prompts
+      // This is just a fallback for direct rating updates
       const response = await fetch('/api/ratings');
       if (response.ok) {
         const data = await response.json();
         const ratingsData = data.ratings || {};
-        
-        // Cache the ratings
-        setCachedRatings(ratingsData);
         
         // Update state
         setRatings(ratingsData);
@@ -210,66 +208,127 @@ export default function PromptsPage() {
       }
     };
 
-    async function fetchPrompts() {
+    async function fetchPromptsAndRatings() {
       try {
-        // Fetch prompts
-        const promptsResponse = await fetch('/api/prompts');
+        // Check cache first
+        const cacheKey = 'promptsAndRatingsCache';
+        const cacheExpiryTime = 1000 * 60 * 5; // 5 minutes
+        let shouldFetchFromAPI = true;
         
-        if (!promptsResponse.ok) {
-          throw new Error('Failed to fetch prompts');
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+              const { data, timestamp } = JSON.parse(cachedData);
+              // Use cache if it's less than 5 minutes old
+              if (Date.now() - timestamp < cacheExpiryTime) {
+                setPrompts(data.prompts);
+                promptsRef.current = data.prompts;
+                setRatings(data.ratings);
+                ratingsRef.current = data.ratings;
+                shouldFetchFromAPI = false;
+                
+                // Extract all tags for filtering
+                const tags = new Set<string>();
+                data.prompts.forEach((prompt: Partial<Prompt>) => {
+                  prompt.tags?.forEach(tag => tags.add(tag));
+                });
+                setAllTags(Array.from(tags));
+
+                // Load favorites from localStorage
+                const savedFavorites = localStorage.getItem('favoritedPrompts');
+                const currentFavorites = savedFavorites ? JSON.parse(savedFavorites) : [];
+                setFavorites(currentFavorites);
+                favoritesRef.current = currentFavorites;
+                
+                // Set initial sorting with all data
+                const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
+                sortOptionRef.current = currentSortOption;
+                
+                const sortedData = sortPrompts(
+                  data.prompts, 
+                  currentSortOption, 
+                  currentFavorites,
+                  data.ratings
+                );
+                
+                setFilteredPrompts(sortedData);
+                setLoading(false);
+              }
+            }
+          } catch (e) {
+            console.error('Error reading from cache:', e);
+          }
         }
         
-        const data = await promptsResponse.json();
-        setPrompts(data);
-        promptsRef.current = data;
-        
-        // Extract prompt slugs for batch rating fetch
-        const slugs = data.map((prompt: Partial<Prompt>) => prompt.slug || '').filter(Boolean);
-        
-        // Extract all tags for filtering
-        const tags = new Set<string>();
-        data.forEach((prompt: Partial<Prompt>) => {
-          prompt.tags?.forEach(tag => tags.add(tag));
-        });
-        setAllTags(Array.from(tags));
+        if (shouldFetchFromAPI) {
+          // Fetch prompts and ratings in a single request
+          const response = await fetch('/api/prompts', {
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch prompts and ratings');
+          }
+          
+          const { prompts: promptsData, ratings: ratingsData } = await response.json();
+          
+          // Update state
+          setPrompts(promptsData);
+          promptsRef.current = promptsData;
+          setRatings(ratingsData);
+          ratingsRef.current = ratingsData;
+          
+          // Extract all tags for filtering
+          const tags = new Set<string>();
+          promptsData.forEach((prompt: Partial<Prompt>) => {
+            prompt.tags?.forEach(tag => tags.add(tag));
+          });
+          setAllTags(Array.from(tags));
 
-        // Load favorites from localStorage
-        const savedFavorites = localStorage.getItem('favoritedPrompts');
-        const currentFavorites = savedFavorites ? JSON.parse(savedFavorites) : [];
-        setFavorites(currentFavorites);
-        favoritesRef.current = currentFavorites;
-        
-        // Fetch all ratings in one batch request
-        const ratingsData = await fetchAllRatings(slugs);
-        
-        // Set initial sorting with all data
-        const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
-        sortOptionRef.current = currentSortOption;
-        
-        const sortedData = sortPrompts(
-          data, 
-          currentSortOption, 
-          currentFavorites,
-          ratingsData
-        );
-        
-        setFilteredPrompts(sortedData);
-        setLoading(false);
-        
-        // Prefetch individual ratings for each prompt to ensure they're cached
-        // This runs after the initial render to improve perceived performance
-        setTimeout(() => {
-          prefetchIndividualRatings(slugs, ratingsData);
-        }, 1000);
+          // Load favorites from localStorage
+          const savedFavorites = localStorage.getItem('favoritedPrompts');
+          const currentFavorites = savedFavorites ? JSON.parse(savedFavorites) : [];
+          setFavorites(currentFavorites);
+          favoritesRef.current = currentFavorites;
+          
+          // Set initial sorting with all data
+          const currentSortOption = sessionStorage.getItem('promptsSortOption') || 'newest';
+          sortOptionRef.current = currentSortOption;
+          
+          const sortedData = sortPrompts(
+            promptsData, 
+            currentSortOption, 
+            currentFavorites,
+            ratingsData
+          );
+          
+          setFilteredPrompts(sortedData);
+          setLoading(false);
+          
+          // Cache the response
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify({
+                data: { prompts: promptsData, ratings: ratingsData },
+                timestamp: Date.now()
+              }));
+            } catch (e) {
+              console.error('Error storing in cache:', e);
+            }
+          }
+        }
       } catch (error) {
-        console.error('Error fetching prompts:', error);
+        console.error('Error fetching prompts and ratings:', error);
         setLoading(false);
       }
     }
     
-    // Load preferences first, then fetch prompts
+    // Load preferences first, then fetch prompts and ratings
     loadDisplayPreferences();
-    fetchPrompts();
+    fetchPromptsAndRatings();
 
     // Listen for favorite updates from other components
     const handleFavoritesUpdate = (event: Event) => {
@@ -283,17 +342,16 @@ export default function PromptsPage() {
     const handleRatingsUpdate = () => {
       const fetchLatestRatings = async () => {
         try {
-          // Get all prompt slugs
-          const slugs = promptsRef.current.map(p => p.slug || '').filter(Boolean);
-          
           // Re-fetch all ratings
-          const updatedRatings = await fetchAllRatings(slugs);
+          const updatedRatings = await fetchAllRatings();
           
           // Re-sort the prompts if the sort option is 'likes'
           if (sortOptionRef.current === 'likes') {
             setFilteredPrompts(prevPrompts => 
               sortPrompts(prevPrompts, sortOptionRef.current, favoritesRef.current, updatedRatings)
             );
+            // Reset to first page when ratings change affects sorting
+            setCurrentPage(1);
           }
         } catch (error) {
           console.error('Error fetching updated ratings:', error);
@@ -367,7 +425,10 @@ export default function PromptsPage() {
       favoritesRef.current, 
       ratingsRef.current
     );
+    
     setFilteredPrompts(sorted);
+    // Reset to first page when filters change
+    setCurrentPage(1);
   }, []);
 
   const handleSortChange = useCallback((option: string) => {
@@ -385,6 +446,9 @@ export default function PromptsPage() {
     setFilteredPrompts(prevPrompts => 
       sortPrompts(prevPrompts, option, favoritesRef.current, ratingsRef.current)
     );
+    
+    // Reset to first page when sort changes
+    setCurrentPage(1);
   }, []);
   
   const handleViewChange = useCallback((view: 'grid' | 'list') => {
@@ -400,6 +464,27 @@ export default function PromptsPage() {
 
   const handleFavoritesChange = useCallback((newFavorites: string[]) => {
     setFavorites(newFavorites);
+    
+    // If sorting by favorites, reset to first page
+    if (sortOptionRef.current === 'favorites') {
+      setCurrentPage(1);
+    }
+  }, []);
+  
+  // Get current prompts for pagination
+  const getCurrentPagePrompts = useCallback(() => {
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    return filteredPrompts.slice(indexOfFirstItem, indexOfLastItem);
+  }, [currentPage, filteredPrompts, itemsPerPage]);
+  
+  // Change page handler
+  const handlePageChange = useCallback((pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
   }, []);
 
   return (
@@ -454,17 +539,101 @@ export default function PromptsPage() {
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-          {filteredPrompts.map((prompt) => (
+          {getCurrentPagePrompts().map((prompt) => (
             <PromptCard key={prompt.slug} prompt={prompt} />
           ))}
         </div>
       ) : (
         <div className="mt-8 border rounded-md">
-          {filteredPrompts.map((prompt) => (
+          {getCurrentPagePrompts().map((prompt) => (
             <PromptRow key={prompt.slug} prompt={prompt} />
           ))}
         </div>
       )}
+      
+      {/* Pagination */}
+      {filteredPrompts.length > 0 && (
+        <div className="flex justify-center mt-12">
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            {Array.from({ length: Math.ceil(filteredPrompts.length / itemsPerPage) }).map((_, index) => {
+              const pageNumber = index + 1;
+              // Show only current page, first, last, and adjacent pages
+              if (
+                pageNumber === 1 ||
+                pageNumber === Math.ceil(filteredPrompts.length / itemsPerPage) ||
+                (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+              ) {
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={currentPage === pageNumber ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(pageNumber)}
+                    aria-label={`Page ${pageNumber}`}
+                    aria-current={currentPage === pageNumber ? "page" : undefined}
+                  >
+                    {pageNumber}
+                  </Button>
+                );
+              } else if (
+                (pageNumber === currentPage - 2 && currentPage > 3) || 
+                (pageNumber === currentPage + 2 && currentPage < Math.ceil(filteredPrompts.length / itemsPerPage) - 2)
+              ) {
+                // Show ellipsis for gaps
+                return <span key={pageNumber} className="px-2">...</span>;
+              }
+              return null;
+            })}
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === Math.ceil(filteredPrompts.length / itemsPerPage)}
+              aria-label="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* CTAs: Newsletter and Contribute */}
+      <div className="mt-20 mb-16 grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Newsletter Signup */}
+        <div className="bg-muted/50 rounded-lg p-6 border">
+          <h2 className="text-xl font-semibold mb-4">Join the Artificer&apos;s Guild</h2>
+          <p className="text-muted-foreground mb-6">Subscribe to receive updates about new prompts, AI techniques, and insights.</p>
+          <div className="max-w-md">
+            <NewsletterForm />
+          </div>
+        </div>
+        
+        {/* Contribute CTA */}
+        <div className="bg-muted/50 rounded-lg p-6 border">
+          <h2 className="text-xl font-semibold mb-4">Contribute Your Prompt</h2>
+          <p className="text-muted-foreground mb-6">Have a great prompt that others would find useful? Share your knowledge with the community!</p>
+          <a 
+            href="https://github.com/nkkko/neoartifex/blob/main/CONTRIBUTING.md" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Github className="h-4 w-4 mr-2" />
+            Learn how to contribute
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

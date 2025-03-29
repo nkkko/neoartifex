@@ -20,6 +20,9 @@ const RATINGS_PREFIX = 'ratings:';
 // Helper to create a full key for a prompt
 const getRatingKey = (slug: string) => `${RATINGS_PREFIX}${slug}`;
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // Cache for 1 hour
+
 // KV operations wrapper
 const KV = {
   // Get a single rating by slug
@@ -169,7 +172,11 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    return NextResponse.json({ ratings, timestamp: Date.now() });
+    return NextResponse.json({ ratings, timestamp: Date.now() }, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=3600'
+      }
+    });
   } catch (error) {
     console.error('Error fetching ratings:', error);
     return NextResponse.json(

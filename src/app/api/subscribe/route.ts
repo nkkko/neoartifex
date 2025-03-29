@@ -11,7 +11,7 @@ const AUDIENCE_ID = '6b863edc-8d84-493a-8103-2058a36504ce';
 export async function POST(request: Request) {
   try {
     const { email, firstName, lastName } = await request.json();
-    
+
     if (!email) {
       return NextResponse.json(
         { success: false, message: 'Email is required' },
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     // Send confirmation email to the subscriber
     const { data, error } = await resend.emails.send({
-      from: 'NeoArtifex <hi@neoartifex.com>',
+      from: 'NeoArtifex <hi@m.neoartifex.com>',
       to: [email],
       subject: 'Welcome to the Artificer\'s Guild',
       html: `
@@ -65,11 +65,11 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Successfully subscribed to the Artificer\'s Guild newsletter' 
+    return NextResponse.json({
+      success: true,
+      message: 'Successfully subscribed to the Artificer\'s Guild newsletter'
     });
-    
+
   } catch (error) {
     console.error('Error in subscription:', error);
     return NextResponse.json(
