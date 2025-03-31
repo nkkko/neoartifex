@@ -14,13 +14,8 @@ import {
   TextReveal,
   ScrollReveal
 } from '@/components/animations';
-
-// YouTube video data
-interface YouTubeVideo {
-  id: string;
-  title: string;
-  publishedAt?: string;
-}
+import featuredVideosData from '@/data/featured-videos.json';
+import { YouTubeVideo, FeaturedVideo } from '@/types';
 
 // Helper to generate YouTube thumbnail URL
 const getThumbnailUrl = (videoId: string) => {
@@ -57,7 +52,9 @@ const initialVideos = [
 
 export default function YouTubePage() {
   const [videos, setVideos] = useState<YouTubeVideo[]>(initialVideos);
+  const [featuredVideos, setFeaturedVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
 
   useEffect(() => {
     const loadVideos = async () => {
@@ -75,7 +72,36 @@ export default function YouTubePage() {
       }
     };
 
+    const loadFeaturedVideos = async () => {
+      try {
+        const featured = featuredVideosData.featured_videos as FeaturedVideo[];
+        const featuredPromises = featured.map(video => fetchVideoData(video.id));
+        const featuredData = await Promise.all(featuredPromises);
+        
+        // Filter out any null responses, add channel info, and update state
+        const validFeaturedVideos = featuredData
+          .filter((video, index) => video !== null)
+          .map((video, index) => {
+            if (video) {
+              return {
+                ...video,
+                channel: featured[index].channel
+              };
+            }
+            return null;
+          })
+          .filter(video => video !== null) as YouTubeVideo[];
+          
+        setFeaturedVideos(validFeaturedVideos);
+      } catch (error) {
+        console.error('Error loading featured videos:', error);
+      } finally {
+        setFeaturedLoading(false);
+      }
+    };
+
     loadVideos();
+    loadFeaturedVideos();
   }, []);
 
   return (
@@ -118,7 +144,7 @@ export default function YouTubePage() {
         <section className="container mx-auto px-4">
           <div className="text-center mb-12">
             <TextReveal>
-              <h2 className="text-3xl font-bold mb-3">Featured Videos</h2>
+              <h2 className="text-3xl font-bold mb-3">NeoArtifex Videos</h2>
             </TextReveal>
 
             <TextReveal delay={0.1}>
@@ -156,6 +182,77 @@ export default function YouTubePage() {
                       </div>
                       <div className="p-5 flex flex-col flex-grow">
                         <h3 className="text-xl font-semibold mb-4">{video.title}</h3>
+                        {video.publishedAt && (
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Published: {video.publishedAt}
+                          </p>
+                        )}
+                        <Button 
+                          asChild
+                          variant="outline"
+                          className="mt-auto"
+                        >
+                          <Link href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank">
+                            Watch Video
+                          </Link>
+                        </Button>
+                      </div>
+                    </Card>
+                  </ScaleOnHover>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          )}
+        </section>
+      </ScrollReveal>
+      
+      {/* Featured Videos Section */}
+      <ScrollReveal>
+        <section className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <TextReveal>
+              <h2 className="text-3xl font-bold mb-3">Featured Videos</h2>
+            </TextReveal>
+
+            <TextReveal delay={0.1}>
+              <p className="max-w-3xl mx-auto text-muted-foreground">
+                Check out interviews and content featuring NeoArtifex on other channels.
+              </p>
+            </TextReveal>
+          </div>
+
+          {featuredLoading ? (
+            <div className="text-center py-12">
+              <p>Loading featured videos...</p>
+            </div>
+          ) : (
+            <StaggerContainer staggerDelay={0.1} className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredVideos.map((video) => (
+                <StaggerItem key={video.id}>
+                  <ScaleOnHover>
+                    <Card className="overflow-hidden h-full flex flex-col">
+                      <div className="relative aspect-video">
+                        <Link href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank">
+                          <Image
+                            src={getThumbnailUrl(video.id)}
+                            alt={video.title}
+                            fill
+                            className="object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-full bg-white bg-opacity-80 flex items-center justify-center">
+                              <div className="w-0 h-0 border-t-[10px] border-b-[10px] border-l-[16px] border-t-transparent border-b-transparent border-l-red-600 ml-1"></div>
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                      <div className="p-5 flex flex-col flex-grow">
+                        <h3 className="text-xl font-semibold mb-2">{video.title}</h3>
+                        {video.channel && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Channel: {video.channel}
+                          </p>
+                        )}
                         {video.publishedAt && (
                           <p className="text-sm text-muted-foreground mb-4">
                             Published: {video.publishedAt}
