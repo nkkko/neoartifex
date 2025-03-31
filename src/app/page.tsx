@@ -25,13 +25,12 @@ export default function Home() {
       >
         <div className="container mx-auto px-4 text-center">
           <SlideUp>
-            <h1 className="text-5xl font-bold mb-3">The Modern Artificer</h1>
+            <h1 className="text-5xl font-bold mb-3">Master AI Prompts with Ease</h1>
           </SlideUp>
 
           <SlideUp delay={0.2}>
             <p className="text-xl max-w-2xl mx-auto mb-10">
-              NeoArtifex helps ambitious builders harness AI to craft remarkable solutions.
-              For those who don&apos;t just use tools, but master them.
+              NeoArtifex helps new builders and creators harness AI to craft remarkable solutions.
             </p>
           </SlideUp>
 
